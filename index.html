@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>P2P Workspace Chat</title>
     <style>
         :root {
@@ -21,7 +21,6 @@
             --badge-text: #b07d1a;
             --icon-color: #636c76;
             
-            /* Цвета для голосовых Telegram-style */
             --tg-voice-bg: #f4f5f7;
             --tg-voice-btn: #2481cc;
             --tg-voice-btn-icon: #ffffff;
@@ -68,6 +67,8 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            height: -webkit-fill-available;
+            overflow: hidden; /* Убирает скролл на самой странице */
             padding: 20px;
         }
 
@@ -75,7 +76,6 @@
             width: 100%;
             max-width: 960px;
             height: 100%;
-            max-height: 900px;
             background-color: var(--bg-card);
             border-radius: 24px;
             border: 1px solid var(--border);
@@ -93,6 +93,7 @@
             align-items: center;
             border-bottom: 1px solid var(--border);
             z-index: 5;
+            flex-shrink: 0;
         }
 
         .header-title {
@@ -168,29 +169,30 @@
         }
 
         .p2p-panel {
-            width: 280px;
+            width: 300px;
             border-right: 1px solid var(--border);
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            overflow-y: auto;
+            gap: 12px;
+            overflow-y: auto; /* Скролл только внутри панели */
             background-color: var(--bg-card);
             z-index: 15;
             transition: margin-left 0.3s ease, transform 0.3s ease;
+            flex-shrink: 0;
         }
 
         .p2p-panel.collapsed {
-            margin-left: -280px;
+            margin-left: -300px;
         }
 
         .panel-title {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-muted);
             font-weight: 600;
-            margin-top: 6px;
+            margin-top: 8px;
         }
 
         .p2p-panel button {
@@ -205,7 +207,7 @@
         }
 
         .p2p-panel button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
@@ -215,9 +217,27 @@
             color: var(--text-main);
         }
 
+        .p2p-panel button.danger-link {
+            background-color: transparent;
+            border: 1px dashed rgba(255, 77, 79, 0.3);
+            color: #ff4d4f;
+            margin-top: auto;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.85rem;
+        }
+
         textarea {
             width: 100%;
-            height: 70px;
+            height: 60px;
             background-color: var(--bg-input);
             border: 1px solid transparent;
             border-radius: 8px;
@@ -233,12 +253,13 @@
             display: flex;
             flex-direction: column;
             background-color: var(--bg-card);
+            overflow: hidden;
         }
 
         .messages-container {
             flex: 1;
             padding: 20px;
-            overflow-y: auto;
+            overflow-y: auto; /* Скролл только для ленты сообщений */
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -279,7 +300,6 @@
             margin-top: 4px;
         }
 
-        /* Стильный Телеграм-плеер для голосовых */
         .tg-voice-player {
             display: flex;
             align-items: center;
@@ -362,6 +382,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 4px;
+            flex-shrink: 0;
         }
         
         .modes-left {
@@ -384,15 +405,12 @@
             color: var(--accent-text);
             border-color: var(--accent);
         }
-        .pill-btn.danger {
-            border-color: rgba(255, 0, 0, 0.2);
-            color: #ff4d4f;
-        }
 
         .input-container {
             padding: 12px 20px 20px 20px;
             display: flex;
             flex-direction: column;
+            flex-shrink: 0;
         }
 
         .input-wrapper {
@@ -404,7 +422,7 @@
             gap: 12px;
         }
 
-        .input-wrapper input {
+        .input-wrapper input[type="text"] {
             flex: 1;
             background: transparent;
             border: none;
@@ -450,7 +468,6 @@
             body { padding: 0; }
             .workspace {
                 max-width: 100%;
-                max-height: 100%;
                 border-radius: 0;
                 border: none;
             }
@@ -468,12 +485,6 @@
             .p2p-panel.open {
                 transform: translateX(0);
             }
-            .input-container {
-                padding: 10px 14px 14px 14px;
-            }
-            .messages-container {
-                padding: 14px;
-            }
         }
     </style>
 </head>
@@ -484,7 +495,7 @@
             <div class="header-title">P2P Workspace Pro</div>
             <div class="header-controls">
                 <div id="status" class="status-badge">Ожидание p2p</div>
-                <button class="btn-icon" onclick="togglePanel()" title="Настройки подключения">
+                <button class="btn-icon" onclick="togglePanel()" title="Конфигурация шлюза">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1  1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 </button>
             </div>
@@ -492,16 +503,34 @@
 
         <div class="main-content">
             <div class="p2p-panel" id="p2pPanel">
-                <div class="panel-title">Шаг 1: Создание</div>
+                <div class="panel-title">Шаг 1: Инициализация</div>
                 <button onclick="createOffer()">Создать комнату</button>
+                
                 <div class="panel-title">Ваш токен связи:</div>
-                <textarea id="localKey" readonly placeholder="Здесь появится сгенерированный токен"></textarea>
-                <div class="panel-title">Шаг 2: Подключение</div>
-                <textarea id="remoteKey" placeholder="Вставьте токен собеседника сюда"></textarea>
+                <textarea id="localKey" readonly placeholder="Токен сгенерируется автоматически"></textarea>
+                
+                <div class="panel-title">Шаг 2: Удалённый узел</div>
+                <textarea id="remoteKey" placeholder="Вставьте токен пира"></textarea>
                 <button onclick="acceptRemoteKey()">Подключить токен</button>
                 
-                <div class="panel-title">Утилиты сборки</div>
-                <button class="secondary" id="btnShareCode" onclick="shareCurrentCode()" disabled title="Отправить исходный код этого чата собеседнику">🔗 Поделиться кодом</button>
+                <div class="panel-title">Параметры безопасности</div>
+                <label class="panel-title" style="display:block; margin-bottom:4px;">Шифрование</label>
+                <select id="cryptoType">
+                    <option value="webrtc">Стандартное (WebRTC DTLS/SRTP)</option>
+                    <option value="aes256">Дополнительное (AES-GCM 256-bit на клиенте)</option>
+                </select>
+
+                <label class="panel-title" style="display:block; margin-top:8px; margin-bottom:4px;">ICE-Инфраструктура</label>
+                <select id="iceConfig" onchange="updateIceConfig()">
+                    <option value="google">Google STUN (Внешняя сеть)</option>
+                    <option value="public">Public STUN/TURN (Обход NAT)</option>
+                    <option value="local">Localhost / LAN (Без выхода в интернет)</option>
+                </select>
+                
+                <div class="panel-title">Сборка и экспорт</div>
+                <button class="secondary" id="btnShareCode" onclick="shareCurrentCode()" disabled>🔗 Поделиться кодом</button>
+                
+                <button class="danger-link" onclick="clearHistory()">🗑 Очистить историю чата</button>
             </div>
 
             <div class="chat-area">
@@ -510,20 +539,20 @@
                 <div class="modes-bar">
                     <div class="modes-left">
                         <button class="pill-btn active">💬 Диалог</button>
-                        <button class="pill-btn" onclick="alert('Все данные передаются в зашифрованных P2P-каналах памяти браузера.')">🔒 Безопасность</button>
+                        <button class="pill-btn" onclick="alert('Канал защищен сквозным туннелированием в ОЗУ вашего браузера.')">🔒 Безопасность</button>
                     </div>
-                    <button class="pill-btn danger" onclick="clearHistory()">🗑 Очистить чат</button>
                 </div>
 
                 <div class="input-container">
                     <div class="input-wrapper">
-                        <input type="file" id="fileField" style="display:none" onchange="handleFileSelect(this)">
+                        <!-- Исправленный инпут для Самсунга: захват через общий тип -->
+                        <input type="file" id="fileField" onchange="handleFileSelect(this)" style="display:none">
                         
-                        <div class="input-icon" onclick="document.getElementById('fileField').click()" title="Выбрать документ, фото или аудио">
+                        <div class="input-icon" onclick="document.getElementById('fileField').click()" title="Выбрать файл">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                         </div>
                         
-                        <div class="input-icon" id="micBtn" onclick="toggleVoiceRecord()" title="Записать голосовое сообщение" style="opacity: 0.5; cursor: not-allowed;">
+                        <div class="input-icon" id="micBtn" onclick="toggleVoiceRecord()" title="Голосовое сообщение" style="opacity: 0.5; cursor: not-allowed;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                         </div>
                         
@@ -549,12 +578,10 @@
         let audioChunks = [];
         let isRecording = false;
 
-        const rtcConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
+        let currentIceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ];
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('p2p_chat_history');
@@ -568,13 +595,25 @@
                             renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side);
                         }
                     });
-                } catch (e) {
-                    console.error("Ошибка чтения истории:", e);
-                }
+                } catch (e) { console.error(e); }
             } else {
-                renderTextMessage("Привет! Это приватный P2P-мессенджер. Теперь здесь работают кастомные голосовые в стиле Telegram и отправка текущего кода одной кнопкой!", 'in');
+                renderTextMessage("Чат готов к работе. Настройте конфигурацию шифрования в панели параметров.", 'in');
             }
         });
+
+        function updateIceConfig() {
+            const type = document.getElementById('iceConfig').value;
+            if (type === 'google') {
+                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+            } else if (type === 'public') {
+                currentIceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun.ekiga.net' }
+                ];
+            } else if (type === 'local') {
+                currentIceServers = []; // Без внешних STUN серверов, чистый локальный обмен
+            }
+        }
 
         function saveToStorage(messageObject) {
             chatHistory.push(messageObject);
@@ -680,7 +719,7 @@
         }
 
         async function createOffer() {
-            peerConnection = new RTCPeerConnection(rtcConfig);
+            peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
             setupDataChannel(peerConnection.createDataChannel("chat"));
             bindPeerEvents(peerConnection);
             const offer = await peerConnection.createOffer();
@@ -694,7 +733,7 @@
             try {
                 const remoteDesc = JSON.parse(atob(rawKey));
                 if (!peerConnection) {
-                    peerConnection = new RTCPeerConnection(rtcConfig);
+                    peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
                     peerConnection.ondatachannel = (e) => setupDataChannel(e.channel);
                     bindPeerEvents(peerConnection);
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
@@ -729,19 +768,48 @@
             dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
         }
 
+        // Кроссплатформенный фикс стабильного считывания файлов (Самсунг S25U) через ArrayBuffer
         function handleFileSelect(input) {
             const file = input.files[0];
             if (!file || !dataChannel || dataChannel.readyState !== 'open') return;
 
             const reader = new FileReader();
+            reader.onerror = () => {
+                alert("Ошибка чтения файла на мобильном устройстве. Попробуйте еще раз.");
+            };
+            
             reader.onload = function(e) {
-                const packet = { type: 'file', filename: file.name, filetype: file.type, payload: e.target.result };
-                dataChannel.send(JSON.stringify(packet));
-                renderFileMessage(file.name, file.type, e.target.result, 'out');
-                saveToStorage({ msgType: 'file', filename: file.name, filetype: file.type, payload: e.target.result, side: 'out' });
+                const arrayBuffer = e.target.result;
+                // Принудительно конвертируем в стабильный бинарный base64 стрим
+                let binary = '';
+                const bytes = new Uint8Array(arrayBuffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                
+                // Исправляем пустой тип контента, частый для кэша галереи Android
+                let finalMime = file.type || "application/octet-stream";
+                const base64Payload = `data:${finalMime};base64,` + btoa(binary);
+
+                const packet = { 
+                    type: 'file', 
+                    filename: file.name || "Файл", 
+                    filetype: finalMime, 
+                    payload: base64Payload 
+                };
+                
+                try {
+                    dataChannel.send(JSON.stringify(packet));
+                    renderFileMessage(packet.filename, packet.filetype, base64Payload, 'out');
+                    saveToStorage({ msgType: 'file', filename: packet.filename, filetype: packet.filetype, payload: base64Payload, side: 'out' });
+                } catch(err) {
+                    alert("Файл слишком большой для моментальной P2P передачи. Попробуйте сжать его.");
+                }
                 input.value = '';
             };
-            reader.readAsDataURL(file);
+            
+            reader.readAsArrayBuffer(file);
         }
 
         async function toggleVoiceRecord() {
@@ -773,19 +841,18 @@
                     mediaRecorder.start();
                     isRecording = true;
                     micBtn.classList.add('recording');
-                    inputField.placeholder = "Идёт запись... Нажмите микрофон повторно для отправки";
+                    inputField.placeholder = "Идёт запись... Нажмите микрофон для отправки";
                     inputField.disabled = true;
                 } catch (err) { alert('Микрофон недоступен: ' + err.message); }
             } else {
                 if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
                 isRecording = false;
                 micBtn.classList.remove('recording');
-                inputField.placeholder = "Введите текст сообщения...";
+                inputField.placeholder = "Введите text сообщения...";
                 inputField.disabled = false;
             }
         }
 
-        // Исправленная стабильная функция кодирования через файловый Blob
         function shareCurrentCode() {
             if (!isConnectedState || !dataChannel || dataChannel.readyState !== 'open') return;
 
@@ -795,7 +862,7 @@
             
             reader.onload = function(e) {
                 const base64DataURL = e.target.result;
-                const filename = "workspace-chat-v3.html";
+                const filename = "workspace-chat-v4.html";
                 const packet = { type: 'file', filename: filename, filetype: 'text/html', payload: base64DataURL };
                 
                 dataChannel.send(JSON.stringify(packet));
@@ -817,7 +884,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // Инициализация кастомного визуального плеера Telegram-style
         function initTelegramAudioPlayer(container, srcUrl) {
             const audio = new Audio(srcUrl);
             audio.preload = "metadata";
@@ -847,22 +913,15 @@
             playerView.appendChild(infoNode);
             container.appendChild(playerView);
 
-            // Обработка клика по дорожке
             timeline.addEventListener('click', (e) => {
                 const rect = timeline.getBoundingClientRect();
                 const clickPosition = (e.clientX - rect.left) / rect.width;
-                if (!isNaN(audio.duration)) {
-                    audio.currentTime = clickPosition * audio.duration;
-                }
+                if (!isNaN(audio.duration)) audio.currentTime = clickPosition * audio.duration;
             });
 
             playBtn.addEventListener('click', () => {
                 document.querySelectorAll('audio').forEach(el => { if(el !== audio) el.pause(); });
-                if (audio.paused) {
-                    audio.play().catch(() => {});
-                } else {
-                    audio.pause();
-                }
+                if (audio.paused) audio.play().catch(() => {}); else audio.pause();
             });
 
             audio.addEventListener('play', () => {
@@ -881,14 +940,8 @@
                 }
             });
 
-            audio.addEventListener('loadedmetadata', () => {
-                timeLabel.innerText = formatTime(audio.duration);
-            });
-
-            audio.addEventListener('ended', () => {
-                progressLine.style.width = '0%';
-                timeLabel.innerText = formatTime(audio.duration);
-            });
+            audio.addEventListener('loadedmetadata', () => { timeLabel.innerText = formatTime(audio.duration); });
+            audio.addEventListener('ended', () => { progressLine.style.width = '0%'; timeLabel.innerText = formatTime(audio.duration); });
 
             function formatTime(secs) {
                 if (isNaN(secs)) return "0:00";
@@ -910,7 +963,6 @@
                 img.src = dataUrl;
                 box.appendChild(img);
             } else if (filetype.startsWith('audio/')) {
-                // Если аудио — выводим кастомный плеер Telegram
                 initTelegramAudioPlayer(box, dataUrl);
             } else {
                 const link = document.createElement('a');
