@@ -67,7 +67,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            height: -webkit-fill-available;
+            height: 100dvh; /* Используем динамический вьюпорт для мобильных */
             overflow: hidden;
             padding: 20px;
         }
@@ -469,24 +469,23 @@
             color: var(--accent-text);
         }
 
-        /* Полная адаптивность под мобильные устройства: фиксированные бары */
+        /* Полная адаптивность: избавляемся от sticky, сажаем все на чистый flex-box в рамках dvh */
         @media (max-width: 680px) {
-            body { padding: 0; }
+            body { 
+                padding: 0; 
+            }
             .workspace {
                 max-width: 100%;
-                height: 100vh;
+                height: 100dvh; /* Строго подстраивается под динамические размеры экрана смартфона */
                 border-radius: 0;
                 border: none;
             }
             .header {
-                position: sticky;
-                top: 0;
+                /* Оставляем flex-shrink: 0, элемент никуда не уползет */
             }
             .input-container {
-                position: sticky;
-                bottom: 0;
-                padding-bottom: cubic-bezier(0.1, 0.76, 0.55, 0.94);
-                padding-bottom: max(20px, env(safe-area-inset-bottom));
+                /* Компенсируем системный отступ снизу в браузере */
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
             }
             .p2p-panel { 
                 position: absolute;
@@ -598,7 +597,6 @@
             { urls: 'stun:stun1.l.google.com:19302' }
         ];
 
-        // Автоматический парсинг входящей шеринг-ссылки при загрузке страницы
         window.addEventListener('DOMContentLoaded', async () => {
             const saved = localStorage.getItem('p2p_chat_history');
             if (saved) {
@@ -613,16 +611,13 @@
                 renderTextMessage("Чат готов к работе.", 'in');
             }
 
-            // Проверяем наличие хэша (токена создателя) в URL
             if (window.location.hash && window.location.hash.length > 1) {
                 const incomingToken = window.location.hash.substring(1);
                 document.getElementById('remoteKey').value = incomingToken;
                 
-                // Автоматически разворачиваем панель для наглядности процесса подключения
                 document.getElementById('p2pPanel').classList.add('open');
                 setStatus('Обнаружена ссылка. Подключаемся...');
                 
-                // Шаг 2 для принимающей стороны: создаем Answer на основе полученного Offer
                 try {
                     const remoteDesc = JSON.parse(atob(incomingToken));
                     peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
@@ -633,13 +628,11 @@
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
                     
-                    // Генерируем ответный ключ
                     setTimeout(() => {
                         const sdpData = { type: peerConnection.localDescription.type, sdp: peerConnection.localDescription.sdp };
                         const responseToken = btoa(JSON.stringify(sdpData));
                         document.getElementById('localKey').value = responseToken;
                         
-                        // Копируем ответный токен в буфер, чтобы создателю осталось просто нажать "Вставить"
                         navigator.clipboard.writeText(responseToken).then(() => {
                             alert("Вы успешно открыли комнату! Ответный токен скопирован в буфер обмена. Отправьте его создателю.");
                         }).catch(() => {
@@ -653,7 +646,6 @@
             }
         });
 
-        // Функция быстрой отправки инвайт-ссылки через системный Share-меню телефона
         async function shareConnectionLink() {
             const localKeyVal = document.getElementById('localKey').value.trim();
             if (!localKeyVal) {
@@ -661,7 +653,6 @@
                 return;
             }
 
-            // Создаем прямую ссылку с хэшем токена
             const shareUrl = `${window.location.origin}${window.location.pathname}#${localKeyVal}`;
 
             if (navigator.share) {
@@ -672,10 +663,9 @@
                         url: shareUrl
                     });
                 } catch (err) {
-                    console.log("Пользователь отменил шеринг или произошел сбой");
+                    console.log("Шеринг отменен");
                 }
             } else {
-                // Фоллбэк, если браузер не поддерживает Web Share API
                 await navigator.clipboard.writeText(shareUrl);
                 alert("Ссылка скопирована в буфер обмена. Отправьте её вашему пиру.");
             }
@@ -740,7 +730,6 @@
                 setStatus('В сети', 'connected');
                 toggleInterfaceStates(true);
                 document.getElementById('p2pPanel').classList.remove('open');
-                // Очищаем хэш в целях безопасности
                 window.history.replaceState(null, null, ' ');
             };
             dataChannel.onclose = () => {
