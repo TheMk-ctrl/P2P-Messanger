@@ -68,7 +68,7 @@
             align-items: center;
             height: 100vh;
             height: -webkit-fill-available;
-            overflow: hidden; /* Убирает скролл на самой странице */
+            overflow: hidden;
             padding: 20px;
         }
 
@@ -92,8 +92,9 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            z-index: 5;
+            z-index: 20;
             flex-shrink: 0;
+            background-color: var(--bg-card);
         }
 
         .header-title {
@@ -175,10 +176,10 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            overflow-y: auto; /* Скролл только внутри панели */
+            overflow-y: auto;
             background-color: var(--bg-card);
-            z-index: 15;
-            transition: margin-left 0.3s ease, transform 0.3s ease;
+            z-index: 30;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
         }
 
@@ -222,6 +223,7 @@
             border: 1px dashed rgba(255, 77, 79, 0.3);
             color: #ff4d4f;
             margin-top: auto;
+            padding: 8px;
         }
 
         select {
@@ -254,12 +256,13 @@
             flex-direction: column;
             background-color: var(--bg-card);
             overflow: hidden;
+            height: 100%;
         }
 
         .messages-container {
             flex: 1;
             padding: 20px;
-            overflow-y: auto; /* Скролл только для ленты сообщений */
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -411,6 +414,8 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border);
         }
 
         .input-wrapper {
@@ -464,21 +469,32 @@
             color: var(--accent-text);
         }
 
+        /* Полная адаптивность под мобильные устройства: фиксированные бары */
         @media (max-width: 680px) {
             body { padding: 0; }
             .workspace {
                 max-width: 100%;
+                height: 100vh;
                 border-radius: 0;
                 border: none;
+            }
+            .header {
+                position: sticky;
+                top: 0;
+            }
+            .input-container {
+                position: sticky;
+                bottom: 0;
+                padding-bottom: cubic-bezier(0.1, 0.76, 0.55, 0.94);
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
             }
             .p2p-panel { 
                 position: absolute;
                 left: 0;
                 top: 0;
                 bottom: 0;
-                width: 100%;
-                max-width: 290px;
-                box-shadow: 10px 0 20px rgba(0,0,0,0.15);
+                width: 290px;
+                box-shadow: 10px 0 30px rgba(0,0,0,0.2);
                 transform: translateX(-100%);
                 margin-left: 0 !important;
             }
@@ -510,7 +526,7 @@
                 <textarea id="localKey" readonly placeholder="Токен сгенерируется автоматически"></textarea>
                 
                 <div class="panel-title">Шаг 2: Удалённый узел</div>
-                <textarea id="remoteKey" placeholder="Вставьте токен пира"></textarea>
+                <textarea id="remoteKey" placeholder="Вставьте токен пира или перейдите по шеринг-ссылке"></textarea>
                 <button onclick="acceptRemoteKey()">Подключить токен</button>
                 
                 <div class="panel-title">Параметры безопасности</div>
@@ -527,8 +543,8 @@
                     <option value="local">Localhost / LAN (Без выхода в интернет)</option>
                 </select>
                 
-                <div class="panel-title">Сборка и экспорт</div>
-                <button class="secondary" id="btnShareCode" onclick="shareCurrentCode()" disabled>🔗 Поделиться кодом</button>
+                <div class="panel-title">Быстрое подключение</div>
+                <button class="secondary" id="btnShareCode" onclick="shareConnectionLink()">🔗 Поделиться ссылкой</button>
                 
                 <button class="danger-link" onclick="clearHistory()">🗑 Очистить историю чата</button>
             </div>
@@ -545,7 +561,6 @@
 
                 <div class="input-container">
                     <div class="input-wrapper">
-                        <!-- Исправленный инпут для Самсунга: захват через общий тип -->
                         <input type="file" id="fileField" onchange="handleFileSelect(this)" style="display:none">
                         
                         <div class="input-icon" onclick="document.getElementById('fileField').click()" title="Выбрать файл">
@@ -583,46 +598,99 @@
             { urls: 'stun:stun1.l.google.com:19302' }
         ];
 
-        window.addEventListener('DOMContentLoaded', () => {
+        // Автоматический парсинг входящей шеринг-ссылки при загрузке страницы
+        window.addEventListener('DOMContentLoaded', async () => {
             const saved = localStorage.getItem('p2p_chat_history');
             if (saved) {
                 try {
                     chatHistory = JSON.parse(saved);
                     chatHistory.forEach(msg => {
-                        if (msg.msgType === 'text') {
-                            renderTextMessage(msg.payload, msg.side);
-                        } else if (msg.msgType === 'file') {
-                            renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side);
-                        }
+                        if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side);
+                        else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side);
                     });
                 } catch (e) { console.error(e); }
             } else {
-                renderTextMessage("Чат готов к работе. Настройте конфигурацию шифрования в панели параметров.", 'in');
+                renderTextMessage("Чат готов к работе.", 'in');
+            }
+
+            // Проверяем наличие хэша (токена создателя) в URL
+            if (window.location.hash && window.location.hash.length > 1) {
+                const incomingToken = window.location.hash.substring(1);
+                document.getElementById('remoteKey').value = incomingToken;
+                
+                // Автоматически разворачиваем панель для наглядности процесса подключения
+                document.getElementById('p2pPanel').classList.add('open');
+                setStatus('Обнаружена ссылка. Подключаемся...');
+                
+                // Шаг 2 для принимающей стороны: создаем Answer на основе полученного Offer
+                try {
+                    const remoteDesc = JSON.parse(atob(incomingToken));
+                    peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
+                    peerConnection.ondatachannel = (e) => setupDataChannel(e.channel);
+                    bindPeerEvents(peerConnection);
+                    
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    // Генерируем ответный ключ
+                    setTimeout(() => {
+                        const sdpData = { type: peerConnection.localDescription.type, sdp: peerConnection.localDescription.sdp };
+                        const responseToken = btoa(JSON.stringify(sdpData));
+                        document.getElementById('localKey').value = responseToken;
+                        
+                        // Копируем ответный токен в буфер, чтобы создателю осталось просто нажать "Вставить"
+                        navigator.clipboard.writeText(responseToken).then(() => {
+                            alert("Вы успешно открыли комнату! Ответный токен скопирован в буфер обмена. Отправьте его создателю.");
+                        }).catch(() => {
+                            alert("Вы подключились. Скопируйте 'Ваш токен связи' и передайте создателю.");
+                        });
+                    }, 500);
+
+                } catch(e) {
+                    setStatus('Ошибка разбора ссылки');
+                }
             }
         });
 
+        // Функция быстрой отправки инвайт-ссылки через системный Share-меню телефона
+        async function shareConnectionLink() {
+            const localKeyVal = document.getElementById('localKey').value.trim();
+            if (!localKeyVal) {
+                alert("Сначала нажмите кнопку 'Создать комнату', чтобы сгенерировать токен!");
+                return;
+            }
+
+            // Создаем прямую ссылку с хэшем токена
+            const shareUrl = `${window.location.origin}${window.location.pathname}#${localKeyVal}`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Подключение к P2P Workspace',
+                        text: 'Перейди по ссылке, чтобы мгновенно подключиться к защищенному P2P чату:',
+                        url: shareUrl
+                    });
+                } catch (err) {
+                    console.log("Пользователь отменил шеринг или произошел сбой");
+                }
+            } else {
+                // Фоллбэк, если браузер не поддерживает Web Share API
+                await navigator.clipboard.writeText(shareUrl);
+                alert("Ссылка скопирована в буфер обмена. Отправьте её вашему пиру.");
+            }
+        }
+
         function updateIceConfig() {
             const type = document.getElementById('iceConfig').value;
-            if (type === 'google') {
-                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-            } else if (type === 'public') {
-                currentIceServers = [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun.ekiga.net' }
-                ];
-            } else if (type === 'local') {
-                currentIceServers = []; // Без внешних STUN серверов, чистый локальный обмен
-            }
+            if (type === 'google') currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+            else if (type === 'public') currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.ekiga.net' }];
+            else if (type === 'local') currentIceServers = [];
         }
 
         function saveToStorage(messageObject) {
             chatHistory.push(messageObject);
-            try {
-                localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
-            } catch(e) {
-                chatHistory.shift();
-                localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
-            }
+            try { localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory)); } catch(e) { chatHistory.shift(); }
         }
 
         function clearHistory() {
@@ -644,11 +712,8 @@
 
         function togglePanel() {
             const panel = document.getElementById('p2pPanel');
-            if (window.innerWidth <= 680) {
-                panel.classList.toggle('open');
-            } else {
-                panel.classList.toggle('collapsed');
-            }
+            if (window.innerWidth <= 680) panel.classList.toggle('open');
+            else panel.classList.toggle('collapsed');
         }
 
         function generateLocalToken() {
@@ -664,14 +729,8 @@
             if(enabled) sendBtn.classList.add('active'); else sendBtn.classList.remove('active');
             
             const micBtn = document.getElementById('micBtn');
-            if(enabled) {
-                micBtn.style.opacity = "1";
-                micBtn.style.cursor = "pointer";
-            } else {
-                micBtn.style.opacity = "0.5";
-                micBtn.style.cursor = "not-allowed";
-            }
-            document.getElementById('btnShareCode').disabled = !enabled;
+            if(enabled) { micBtn.style.opacity = "1"; micBtn.style.cursor = "pointer"; } 
+            else { micBtn.style.opacity = "0.5"; micBtn.style.cursor = "not-allowed"; }
         }
 
         function setupDataChannel(channel) {
@@ -681,6 +740,8 @@
                 setStatus('В сети', 'connected');
                 toggleInterfaceStates(true);
                 document.getElementById('p2pPanel').classList.remove('open');
+                // Очищаем хэш в целях безопасности
+                window.history.replaceState(null, null, ' ');
             };
             dataChannel.onclose = () => {
                 isConnectedState = false;
@@ -768,19 +829,13 @@
             dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
         }
 
-        // Кроссплатформенный фикс стабильного считывания файлов (Самсунг S25U) через ArrayBuffer
         function handleFileSelect(input) {
             const file = input.files[0];
             if (!file || !dataChannel || dataChannel.readyState !== 'open') return;
 
             const reader = new FileReader();
-            reader.onerror = () => {
-                alert("Ошибка чтения файла на мобильном устройстве. Попробуйте еще раз.");
-            };
-            
             reader.onload = function(e) {
                 const arrayBuffer = e.target.result;
-                // Принудительно конвертируем в стабильный бинарный base64 стрим
                 let binary = '';
                 const bytes = new Uint8Array(arrayBuffer);
                 const len = bytes.byteLength;
@@ -788,7 +843,6 @@
                     binary += String.fromCharCode(bytes[i]);
                 }
                 
-                // Исправляем пустой тип контента, частый для кэша галереи Android
                 let finalMime = file.type || "application/octet-stream";
                 const base64Payload = `data:${finalMime};base64,` + btoa(binary);
 
@@ -804,11 +858,10 @@
                     renderFileMessage(packet.filename, packet.filetype, base64Payload, 'out');
                     saveToStorage({ msgType: 'file', filename: packet.filename, filetype: packet.filetype, payload: base64Payload, side: 'out' });
                 } catch(err) {
-                    alert("Файл слишком большой для моментальной P2P передачи. Попробуйте сжать его.");
+                    alert("Размер файла превышает лимит прямой передачи.");
                 }
                 input.value = '';
             };
-            
             reader.readAsArrayBuffer(file);
         }
 
@@ -841,35 +894,16 @@
                     mediaRecorder.start();
                     isRecording = true;
                     micBtn.classList.add('recording');
-                    inputField.placeholder = "Идёт запись... Нажмите микрофон для отправки";
+                    inputField.placeholder = "Запись... Нажмите на микрофон для отправки";
                     inputField.disabled = true;
-                } catch (err) { alert('Микрофон недоступен: ' + err.message); }
+                } catch (err) { alert('Микрофон недоступен.'); }
             } else {
                 if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
                 isRecording = false;
                 micBtn.classList.remove('recording');
-                inputField.placeholder = "Введите text сообщения...";
+                inputField.placeholder = "Введите текст сообщения...";
                 inputField.disabled = false;
             }
-        }
-
-        function shareCurrentCode() {
-            if (!isConnectedState || !dataChannel || dataChannel.readyState !== 'open') return;
-
-            const htmlSource = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-            const blob = new Blob([htmlSource], { type: 'text/html' });
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const base64DataURL = e.target.result;
-                const filename = "workspace-chat-v4.html";
-                const packet = { type: 'file', filename: filename, filetype: 'text/html', payload: base64DataURL };
-                
-                dataChannel.send(JSON.stringify(packet));
-                renderFileMessage(filename, 'text/html', base64DataURL, 'out');
-                saveToStorage({ msgType: 'file', filename: filename, filetype: 'text/html', payload: base64DataURL, side: 'out' });
-            };
-            reader.readAsDataURL(blob);
         }
 
         function renderTextMessage(text, side) {
@@ -886,8 +920,6 @@
 
         function initTelegramAudioPlayer(container, srcUrl) {
             const audio = new Audio(srcUrl);
-            audio.preload = "metadata";
-
             const playerView = document.createElement('div');
             playerView.className = 'tg-voice-player';
 
@@ -924,14 +956,8 @@
                 if (audio.paused) audio.play().catch(() => {}); else audio.pause();
             });
 
-            audio.addEventListener('play', () => {
-                playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-            });
-
-            audio.addEventListener('pause', () => {
-                playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-            });
-
+            audio.addEventListener('play', () => { playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'; });
+            audio.addEventListener('pause', () => { playBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'; });
             audio.addEventListener('timeupdate', () => {
                 if (audio.duration) {
                     const pct = (audio.currentTime / audio.duration) * 100;
@@ -939,9 +965,7 @@
                     timeLabel.innerText = formatTime(audio.currentTime);
                 }
             });
-
             audio.addEventListener('loadedmetadata', () => { timeLabel.innerText = formatTime(audio.duration); });
-            audio.addEventListener('ended', () => { progressLine.style.width = '0%'; timeLabel.innerText = formatTime(audio.duration); });
 
             function formatTime(secs) {
                 if (isNaN(secs)) return "0:00";
@@ -970,7 +994,7 @@
                 link.download = filename;
                 link.className = 'file-link';
                 link.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 18 15 15"></polyline></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 18 15 15"></polyline></svg>
                     <span>${filename}</span>
                 `;
                 box.appendChild(link);
