@@ -483,7 +483,6 @@
             border-color: var(--accent);
         }
 
-        /* Полное исправление поля ввода для предотвращения вылетов элементов */
         .input-container {
             padding: 12px 20px 20px 20px;
             display: flex;
@@ -550,7 +549,6 @@
             color: var(--accent-text);
         }
 
-        /* Системный прогрессбар для крупных P2P-передач */
         .p2p-progress-toast {
             position: absolute;
             top: 60px;
@@ -565,7 +563,6 @@
             z-index: 500;
         }
 
-        /* Контекстное меню */
         .msg-context-menu {
             position: fixed;
             z-index: 1000;
@@ -725,6 +722,11 @@
                         <div class="input-icon" onclick="document.getElementById('cameraField').click()" title="Сделать снимок">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                         </div>
+
+                        <!-- Новая кнопка записи голосовых -->
+                        <div class="input-icon" id="micBtn" onclick="toggleVoiceRecord()" title="Записать голос">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        </div>
                         
                         <input type="text" id="msgInput" placeholder="Введите текст сообщения..." oninput="sendTypingSignal()" onkeydown="if(event.key === 'Enter') sendMessage()" disabled>
                         
@@ -758,11 +760,16 @@
         let activeContextMenuTarget = null;
         let currentReplyTarget = null;
 
-        // Переменные для сборщика кусков файлов на приемной стороне
+        // Переменные для сборщика файлов и медиа-потоков
         let incomingFileBuffer = [];
         let incomingFileName = '';
         let incomingFileType = '';
         let incomingFileReply = null;
+
+        // Запись аудио
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
 
         let currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
 
@@ -774,6 +781,7 @@
                     chatHistory.forEach(msg => {
                         if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo);
                         else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side, msg.id, msg.replyTo);
+                        else if (msg.msgType === 'voice') renderVoiceMessage(msg.payload, msg.side, msg.id, msg.replyTo);
                     });
                 } catch (e) { console.error(e); }
             } else {
@@ -879,7 +887,6 @@
 
         function setupDataChannel(channel) {
             dataChannel = channel;
-            // Устанавливаем минимальный порог триггера для контроля отправки крупных медиа-данных
             dataChannel.bufferedAmountLowThreshold = 16384; 
 
             dataChannel.onopen = () => {
@@ -903,7 +910,6 @@
                         renderTextMessage(data.payload, 'in', mId, data.replyTo);
                         saveToStorage({ id: mId, msgType: 'text', payload: data.payload, side: 'in', replyTo: data.replyTo });
                     } 
-                    // Потоковый прием файлов по частям (Защита от падения WebRTC)
                     else if (data.type === 'file-start') {
                         incomingFileBuffer = [];
                         incomingFileName = data.filename;
@@ -918,8 +924,14 @@
                         document.getElementById('p2pProgress').style.display = 'none';
                         const fullPayload = incomingFileBuffer.join('');
                         const mId = data.id || 'msg_' + Date.now();
-                        renderFileMessage(incomingFileName, incomingFileType, fullPayload, 'in', mId, incomingFileReply);
-                        saveToStorage({ id: mId, msgType: 'file', filename: incomingFileName, filetype: incomingFileType, payload: fullPayload, side: 'in', replyTo: incomingFileReply });
+                        
+                        if (incomingFileType.startsWith('audio/')) {
+                            renderVoiceMessage(fullPayload, 'in', mId, incomingFileReply);
+                            saveToStorage({ id: mId, msgType: 'voice', payload: fullPayload, side: 'in', replyTo: incomingFileReply });
+                        } else {
+                            renderFileMessage(incomingFileName, incomingFileType, fullPayload, 'in', mId, incomingFileReply);
+                            saveToStorage({ id: mId, msgType: 'file', filename: incomingFileName, filetype: incomingFileType, payload: fullPayload, side: 'in', replyTo: incomingFileReply });
+                        }
                         incomingFileBuffer = [];
                     }
                 } catch(err) {
@@ -955,7 +967,57 @@
             cancelReply();
         }
 
-        // Потоковый механизм отправки данных кусками по 16 КБ для предотвращения краша канала
+        // Потоковый транспорт чанков (универсальный для файлов и аудио)
+        function sendMediaDataInChunks(base64Data, filename, mimeType) {
+            const mId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const progressIndicator = document.getElementById('p2pProgress');
+            progressIndicator.style.display = 'block';
+
+            dataChannel.send(JSON.stringify({
+                type: 'file-start',
+                filename: filename,
+                filetype: mimeType,
+                replyTo: currentReplyTarget
+            }));
+
+            const CHUNK_SIZE = 16384;
+            let offset = 0;
+
+            function sendNextChunk() {
+                while (offset < base64Data.length) {
+                    if (dataChannel.bufferedAmount > dataChannel.bufferedAmountLowThreshold) {
+                        dataChannel.onbufferedamountlow = () => {
+                            dataChannel.onbufferedamountlow = null;
+                            sendNextChunk();
+                        };
+                        return;
+                    }
+
+                    const chunk = base64Data.slice(offset, offset + CHUNK_SIZE);
+                    offset += CHUNK_SIZE;
+                    const pct = Math.min(100, Math.floor((offset / base64Data.length) * 100));
+                    
+                    progressIndicator.innerText = `Отправка: ${pct}%`;
+                    dataChannel.send(JSON.stringify({ type: 'file-chunk', chunk: chunk, pct: pct }));
+                }
+
+                if (offset >= base64Data.length) {
+                    progressIndicator.style.display = 'none';
+                    dataChannel.send(JSON.stringify({ type: 'file-end', id: mId }));
+                    
+                    if (mimeType.startsWith('audio/')) {
+                        renderVoiceMessage(base64Data, 'out', mId, currentReplyTarget);
+                        saveToStorage({ id: mId, msgType: 'voice', payload: base64Data, side: 'out', replyTo: currentReplyTarget });
+                    } else {
+                        renderFileMessage(filename, mimeType, base64Data, 'out', mId, currentReplyTarget);
+                        saveToStorage({ id: mId, msgType: 'file', filename: filename, filetype: mimeType, payload: base64Data, side: 'out', replyTo: currentReplyTarget });
+                    }
+                    cancelReply();
+                }
+            }
+            sendNextChunk();
+        }
+
         function processFileSelection(input) {
             const file = input.files[0];
             if (!file || !dataChannel || dataChannel.readyState !== 'open') return;
@@ -966,61 +1028,56 @@
                 let binary = '';
                 const bytes = new Uint8Array(arrayBuffer);
                 const len = bytes.byteLength;
-                for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
+                for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
                 
                 const mime = file.type || "application/octet-stream";
                 const base64Data = `data:${mime};base64,` + btoa(binary);
-                const mId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-
-                const progressIndicator = document.getElementById('p2pProgress');
-                progressIndicator.style.display = 'block';
-
-                // 1. Сигнализируем о начале стрима файла
-                dataChannel.send(JSON.stringify({
-                    type: 'file-start',
-                    filename: file.name,
-                    filetype: mime,
-                    replyTo: currentReplyTarget
-                }));
-
-                const CHUNK_SIZE = 16384; // 16 KB куски
-                let offset = 0;
-
-                function sendNextChunk() {
-                    while (offset < base64Data.length) {
-                        // Если системный буфер WebRTC переполнен, делаем паузу и ждем события разгрузки
-                        if (dataChannel.bufferedAmount > dataChannel.bufferedAmountLowThreshold) {
-                            dataChannel.onbufferedamountlow = () => {
-                                dataChannel.onbufferedamountlow = null;
-                                sendNextChunk();
-                            };
-                            return;
-                        }
-
-                        const chunk = base64Data.slice(offset, offset + CHUNK_SIZE);
-                        offset += CHUNK_SIZE;
-                        const pct = Math.min(100, Math.floor((offset / base64Data.length) * 100));
-                        
-                        progressIndicator.innerText = `Отправка: ${pct}%`;
-                        dataChannel.send(JSON.stringify({ type: 'file-chunk', chunk: chunk, pct: pct }));
-                    }
-
-                    // 2. Сигнализируем о завершении стрима
-                    if (offset >= base64Data.length) {
-                        progressIndicator.style.display = 'none';
-                        dataChannel.send(JSON.stringify({ type: 'file-end', id: mId }));
-                        renderFileMessage(file.name, mime, base64Data, 'out', mId, currentReplyTarget);
-                        saveToStorage({ id: mId, msgType: 'file', filename: file.name, filetype: mime, payload: base64Data, side: 'out', replyTo: currentReplyTarget });
-                        cancelReply();
-                    }
-                }
-
-                sendNextChunk();
+                sendMediaDataInChunks(base64Data, file.name, mime);
             };
             reader.readAsArrayBuffer(file);
             input.value = '';
+        }
+
+        // Логика записи голосовых сообщений
+        async function toggleVoiceRecord() {
+            if (!dataChannel || dataChannel.readyState !== 'open') return;
+            const micBtn = document.getElementById('micBtn');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) audioChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            sendMediaDataInChunks(reader.result, 'voice.webm', 'audio/webm');
+                        };
+                        reader.readAsDataURL(audioBlob);
+                        
+                        // Отключаем треки микрофона
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.classList.add('recording');
+                } catch (err) {
+                    alert('Доступ к микрофону заблокирован или не поддерживается.');
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            }
         }
 
         function renderTextMessage(text, side, id, replyTo = null) {
@@ -1085,6 +1142,92 @@
             }
             
             box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, filename, side); });
+            wrapper.appendChild(box);
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Рендеринг и интерактивный плеер для голосовых сообщений
+        function renderVoiceMessage(dataUrl, side, id, replyTo = null) {
+            const container = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `msg-wrapper ${side}`;
+            wrapper.setAttribute('data-msg-id', id);
+            
+            const box = document.createElement('div');
+            box.className = 'msg-box';
+
+            if (replyTo) {
+                const quoteDiv = document.createElement('div');
+                quoteDiv.className = 'reply-quote';
+                quoteDiv.innerHTML = `
+                    <div class="reply-quote-sender">${replyTo.sender === 'out' ? 'Вы' : 'Пир'}</div>
+                    <div class="reply-quote-text">${replyTo.text}</div>
+                `;
+                box.appendChild(quoteDiv);
+            }
+
+            const audio = new Audio(dataUrl);
+            
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'tg-voice-player';
+            playerDiv.innerHTML = `
+                <button class="tg-play-btn">▶</button>
+                <div class="tg-voice-info">
+                    <div class="tg-timeline">
+                        <div class="tg-waveform-bg">
+                            <div class="tg-waveform-progress"></div>
+                        </div>
+                    </div>
+                    <span class="tg-time">0:00</span>
+                </div>
+            `;
+
+            const playBtn = playerDiv.querySelector('.tg-play-btn');
+            const progress = playerDiv.querySelector('.tg-waveform-progress');
+            const timeEl = playerDiv.querySelector('.tg-time');
+            const timeline = playerDiv.querySelector('.tg-timeline');
+
+            audio.addEventListener('loadedmetadata', () => {
+                const min = Math.floor(audio.duration / 60);
+                const sec = Math.floor(audio.duration % 60);
+                timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            });
+
+            audio.addEventListener('timeupdate', () => {
+                const pct = (audio.currentTime / audio.duration) * 100;
+                progress.style.width = `${pct}%`;
+                const min = Math.floor(audio.currentTime / 60);
+                const sec = Math.floor(audio.currentTime % 60);
+                timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            });
+
+            audio.addEventListener('ended', () => {
+                playBtn.innerText = '▶';
+                progress.style.width = '0%';
+            });
+
+            playBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (audio.paused) {
+                    audio.play();
+                    playBtn.innerText = '⏸';
+                } else {
+                    audio.pause();
+                    playBtn.innerText = '▶';
+                }
+            });
+
+            timeline.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const rect = timeline.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const pct = clickX / rect.width;
+                audio.currentTime = pct * audio.duration;
+            });
+
+            box.appendChild(playerDiv);
+            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, 'Голосовое сообщение', side); });
             wrapper.appendChild(box);
             container.appendChild(wrapper);
             container.scrollTop = container.scrollHeight;
