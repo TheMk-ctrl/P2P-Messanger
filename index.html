@@ -7,12 +7,12 @@
     <style>
         :root {
             --bg-main: #ffffff;
-            --bg-accent: #f5f5f7;
+            --bg-accent: #f4f4f7;
             --text-main: #000000;
-            --text-muted: #86868b;
+            --text-muted: #8e8e93;
             --accent-color: #7444ff;
             --border-color: #e5e5ea;
-            --msg-in: #f1f1f4;
+            --msg-in: #ffffff;
             --msg-out: #7444ff;
             --msg-out-text: #ffffff;
         }
@@ -34,7 +34,6 @@
             overflow: hidden;
         }
 
-        /* Шапка */
         header {
             height: 60px;
             border-bottom: 1px solid var(--border-color);
@@ -72,7 +71,6 @@
             background: #34c759;
         }
 
-        /* Область подключения (если нет коннекта) */
         #setupArea {
             display: flex;
             flex-direction: column;
@@ -108,13 +106,14 @@
             font-size: 0.9rem;
         }
 
-        /* Чат-зона */
         #chatArea {
             display: none;
             flex-direction: column;
             flex: 1;
             overflow: hidden;
-            background: var(--bg-accent);
+            /* Легкий праздничный/детский паттерн на фоне как в TG */
+            background-color: #f4f4f7;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%237444ff' fill-opacity='0.04'%3E%3Cpath d='M10 15c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5zm30 20c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5zm20-20c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5zM25 50c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5zm35 10c0-2.8 2.2-5 5-5s5 2.2 5 5-2.2 5-5 5-5-2.2-5-5z'/%3E%3C/g%3E%3C/svg%3E");
         }
 
         #messages {
@@ -123,7 +122,7 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
 
         .msg-wrapper {
@@ -136,13 +135,13 @@
 
         .msg-box {
             max-width: 75%;
-            padding: 10px 14px;
-            border-radius: 16px;
+            padding: 8px 12px;
+            border-radius: 14px;
             font-size: 0.95rem;
             line-height: 1.4;
             position: relative;
             cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.06);
             word-break: break-word;
         }
 
@@ -160,15 +159,17 @@
 
         .msg-meta {
             font-size: 0.7rem;
-            opacity: 0.6;
+            opacity: 0.5;
             text-align: right;
-            margin-top: 4px;
+            margin-top: 2px;
+            margin-left: 12px;
+            display: inline-block;
+            float: right;
             user-select: none;
         }
 
         .msg-wrapper.out .msg-meta { color: rgba(255,255,255,0.8); }
 
-        /* Изображения в сообщениях */
         .msg-media {
             max-width: 100%;
             border-radius: 8px;
@@ -176,14 +177,14 @@
             display: block;
         }
 
-        /* Стили цитирования / Ответов в стиле Telegram */
+        /* Дизайн ответов в стиле Telegram (как на скриншоте) */
         .reply-quote {
             display: flex;
-            background: rgba(116, 68, 255, 0.08);
+            background: rgba(116, 68, 255, 0.06);
             border-left: 3px solid var(--accent-color);
-            border-radius: 4px;
-            padding: 4px 10px;
-            margin-bottom: 6px;
+            border-radius: 3px;
+            padding: 3px 8px;
+            margin-bottom: 4px;
             font-size: 0.85rem;
             flex-direction: column;
             text-align: left;
@@ -197,7 +198,8 @@
         .reply-quote-sender {
             color: var(--accent-color);
             font-weight: 700;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
+            font-size: 0.8rem;
         }
 
         .msg-wrapper.out .reply-quote-sender {
@@ -210,17 +212,17 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 200px;
         }
 
         .msg-wrapper.out .reply-quote-text {
             color: #ffffff;
         }
 
-        /* Поле ввода */
         .input-panel {
             background: var(--bg-main);
             border-top: 1px solid var(--border-color);
-            padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+            padding: 10px 16px max(10px, env(safe-area-inset-bottom));
             display: flex;
             align-items: center;
             gap: 12px;
@@ -230,7 +232,7 @@
             flex: 1;
             background: var(--bg-accent);
             border-radius: 24px;
-            padding: 4px 16px;
+            padding: 2px 16px;
             display: flex;
             align-items: center;
         }
@@ -261,32 +263,30 @@
             color: var(--accent-color);
         }
 
-        /* Контекстное меню сообщения */
+        /* Контекстное меню */
         .context-menu {
             position: fixed;
             background: var(--bg-main);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             display: none;
             z-index: 1000;
-            padding: 6px 0;
-            min-width: 140px;
+            padding: 4px 0;
+            min-width: 130px;
         }
 
         .context-menu-item {
-            padding: 10px 16px;
+            padding: 8px 16px;
             font-size: 0.9rem;
             cursor: pointer;
-            display: flex;
-            align-items: center;
         }
 
         .context-menu-item:hover {
             background: var(--bg-accent);
         }
 
-        /* Встроенный оверлей видоискателя камеры */
+        /* Встроенная камера */
         .camera-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -313,8 +313,8 @@
         }
 
         .btn-snap {
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             background: #fff;
             border: 5px solid rgba(255,255,255,0.3);
@@ -325,7 +325,7 @@
             background: rgba(255,255,255,0.2);
             color: #fff;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 30px;
             font-weight: 600;
             cursor: pointer;
@@ -341,7 +341,6 @@
         </div>
     </header>
 
-    <!-- Экран инициализации и обмена офлайн-офферами -->
     <div id="setupArea">
         <div id="step1">
             <button class="btn" onclick="startAsHost()">Создать комнату (Host)</button>
@@ -357,14 +356,12 @@
         </div>
     </div>
 
-    <!-- Основной интерфейс чата -->
     <div id="chatArea">
         <div id="messages"></div>
         
         <div class="input-panel">
-            <button class="input-action-btn" onclick="openInlineCamera()" title="Сделать снимок встроенной камерой">
-                <!-- Иконка камеры -->
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <button class="input-action-btn" onclick="openInlineCamera()" title="Сделать снимок">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
             </button>
             
             <div class="input-container">
@@ -372,24 +369,21 @@
             </div>
             
             <button class="input-action-btn" onclick="sendMessage()" style="color: var(--accent-color);">
-                <!-- Иконка стрелки -->
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
         </div>
     </div>
 
-    <!-- Контекстное меню для действий с сообщениями -->
     <div id="contextMenu" class="context-menu">
         <div class="context-menu-item" onclick="contextReply()">Ответить</div>
     </div>
 
-    <!-- Компонент встроенной камеры для защиты от зависания и вылета фоновой вкладки -->
     <div class="camera-overlay" id="cameraOverlay">
         <video class="camera-video" id="cameraVideo" autoplay playsinline></video>
         <div class="camera-controls">
             <button class="btn-cam-close" onclick="closeCameraView()">Отмена</button>
             <button class="btn-snap" onclick="takeSnapshot()"></button>
-            <div style="width: 80px;"></div>
+            <div style="width: 70px;"></div>
         </div>
     </div>
 
@@ -401,14 +395,13 @@
         let activeContextMenuTarget = null;
         let cameraStream = null;
 
-        const configuration = { iceServers: [] }; // Полный Serverless режим без STUN/TURN
+        const configuration = { iceServers: [] };
 
         function initPeerConnection() {
             pc = new RTCPeerConnection(configuration);
 
             pc.onicecandidate = (e) => {
                 if (!e.candidate) {
-                    // Ждем сбор всех локальных кандидатов перед генерацией финальной строки конфигурации
                     document.getElementById('sdpLocal').value = btoa(JSON.stringify(pc.localDescription));
                 }
             };
@@ -430,46 +423,38 @@
         function startAsHost() {
             isHost = true;
             initPeerConnection();
-            
             dataChannel = pc.createDataChannel("chat-channel");
             setupChannelEvents(dataChannel);
-
             pc.createOffer().then(offer => pc.setLocalDescription(offer));
-            
             document.getElementById('step1').style.display = 'none';
             document.getElementById('sdpExchange').style.display = 'block';
-            document.getElementById('sdpInstructions').innerText = "Скопируйте ваш код, передайте его собеседнику, а затем вставьте его ответ снизу:";
+            document.getElementById('sdpInstructions').innerText = "Скопируйте ваш код и передайте собеседнику, затем вставьте его ответ ниже:";
         }
 
         function startAsJoiner() {
             isHost = false;
             initPeerConnection();
-
             pc.ondatachannel = (e) => {
                 dataChannel = e.channel;
                 setupChannelEvents(dataChannel);
             };
-
             document.getElementById('step1').style.display = 'none';
             document.getElementById('sdpExchange').style.display = 'block';
-            document.getElementById('sdpInstructions').innerText = "Вставьте сначала код инициатора снизу, скопируйте сгенерированный ответ и отправьте его назад:";
+            document.getElementById('sdpInstructions').innerText = "Вставьте код инициатора ниже, скопируйте ответ и отправьте его назад:";
         }
 
         function connectPeers() {
             const remoteStr = document.getElementById('sdpRemote').value.trim();
-            if (!remoteStr) return alert("Введите корректный токен!");
-
+            if (!remoteStr) return alert("Токен пуст!");
             try {
                 const parsedDesc = JSON.parse(atob(remoteStr));
                 pc.setRemoteDescription(new RTCSessionDescription(parsedDesc)).then(() => {
                     if (!isHost && !pc.localDescription) {
-                        pc.createAnswer().then(answer => {
-                            pc.setLocalDescription(answer);
-                        });
+                        pc.createAnswer().then(answer => pc.setLocalDescription(answer));
                     }
                 });
             } catch (err) {
-                alert("Ошибка декодирования токена. Проверьте правильность копирования.");
+                alert("Ошибка чтения токена.");
             }
         }
 
@@ -494,7 +479,6 @@
             };
         }
 
-        // ОТПРАВКА СООБЩЕНИЙ
         function sendMessage() {
             const input = document.getElementById('msgInput');
             const text = input.value.trim();
@@ -516,7 +500,6 @@
             currentReplyTarget = null;
         }
 
-        // ОТРЕНДЕРИТЬ ТЕКСТОВОЕ СООБЩЕНИЕ С ЦИТИРОВАНИЕМ
         function renderTextMessage(text, side, id = null, replyTo = null) {
             const msgId = id || 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
             const container = document.getElementById('messages');
@@ -558,7 +541,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // ОТРЕНДЕРИТЬ ИЗОБРАЖЕНИЕ
         function renderFileMessage(filename, filetype, payload, side, id) {
             const container = document.getElementById('messages');
             const wrapper = document.createElement('div');
@@ -592,13 +574,12 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // КОНТЕКСТНОЕ МЕНЮ ОТВЕТОВ
         function openContextMenu(e, id, text) {
             activeContextMenuTarget = { id, text };
             const menu = document.getElementById('contextMenu');
             menu.style.display = 'block';
-            menu.style.top = `${e.clientY} - 10px`;
-            menu.style.left = `${Math.min(e.clientX, window.innerWidth - 150)}px`;
+            menu.style.top = `${e.clientY - 10}px`; // Исправлено вычисление пикселей
+            menu.style.left = `${Math.min(e.clientX, window.innerWidth - 140)}px`;
         }
 
         function contextReply() {
@@ -621,7 +602,7 @@
 
         document.addEventListener('click', hideContextMenu);
 
-        // ВСТРОЕННАЯ КАМЕРА (РЕШЕНИЕ ПРОБЛЕМЫ РАЗРЫВА WEB_RTC СЕССИИ)
+        // ВСТРОЕННАЯ КАМЕРА
         async function openInlineCamera() {
             if (!dataChannel || dataChannel.readyState !== 'open') return alert("Нет подключения к пиру!");
             const overlay = document.getElementById('cameraOverlay');
@@ -635,7 +616,7 @@
                 video.srcObject = cameraStream;
                 overlay.style.display = 'flex';
             } catch (err) {
-                alert('Не удалось запустить камеру внутри вкладки. Попробуйте обновить разрешения страницы.');
+                alert('Не удалось запустить камеру внутри вкладки.');
             }
         }
 
@@ -672,7 +653,7 @@
                 dataChannel.send(JSON.stringify(packet));
                 renderFileMessage(filename, 'image/jpeg', base64Payload, 'out', mId);
             } catch(err) {
-                alert("Ошибка передачи кадра через DataChannel.");
+                alert("Ошибка передачи кадра.");
             }
             
             closeCameraView();
