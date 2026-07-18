@@ -167,7 +167,6 @@
             transition: margin-left 0.3s ease, transform 0.3s ease;
         }
 
-        /* Класс скрытия панели для десктопа */
         .p2p-panel.collapsed {
             margin-left: -280px;
         }
@@ -255,7 +254,6 @@
             margin-top: 4px;
         }
 
-        /* Аудиоплеер в чате */
         .msg-box audio {
             max-width: 100%;
             display: block;
@@ -276,8 +274,14 @@
         .modes-bar {
             padding: 0 20px;
             display: flex;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 4px;
+        }
+        
+        .modes-left {
+            display: flex;
+            gap: 8px;
         }
 
         .pill-btn {
@@ -294,6 +298,13 @@
             background-color: var(--accent);
             color: var(--accent-text);
             border-color: var(--accent);
+        }
+        .pill-btn.danger {
+            border-color: rgba(255, 0, 0, 0.2);
+            color: #ff4d4f;
+        }
+        .pill-btn.danger:hover {
+            background-color: rgba(255, 0, 0, 0.05);
         }
 
         .input-container {
@@ -347,7 +358,6 @@
             color: var(--accent-text);
         }
 
-        /* Адаптивный Fullscreen без границ ДЛЯ МОБИЛЬНЫХ */
         @media (max-width: 680px) {
             body { padding: 0; }
             .workspace {
@@ -365,7 +375,7 @@
                 max-width: 290px;
                 box-shadow: 10px 0 20px rgba(0,0,0,0.15);
                 transform: translateX(-100%);
-                margin-left: 0 !important; /* перебиваем десктопный маргин */
+                margin-left: 0 !important;
             }
             .p2p-panel.open {
                 transform: translateX(0);
@@ -405,21 +415,19 @@
 
             <div class="chat-area">
                 <div class="messages-container" id="messages">
-                    <div class="msg-wrapper in">
-                        <div class="msg-box">
-                            Привет! Это приватный **P2P-мессенджер** без серверов. Сгенерируй токен слева или вставь токен друга для начала сессии. Теперь поддерживается отправка фото и файлов!
-                        </div>
-                    </div>
+                    <!-- Сообщения будут рендериться динамически из скрипта -->
                 </div>
 
                 <div class="modes-bar">
-                    <button class="pill-btn active">💬 Диалог</button>
-                    <button class="pill-btn" onclick="alert('Все данные передаются в зашифрованных P2P-каналах памяти браузера.')">🔒 Безопасность</button>
+                    <div class="modes-left">
+                        <button class="pill-btn active">💬 Диалог</button>
+                        <button class="pill-btn" onclick="alert('Все данные передаются в зашифрованных P2P-каналах памяти браузера.')">🔒 Безопасность</button>
+                    </div>
+                    <button class="pill-btn danger" onclick="clearHistory()" title="Очистить историю на этом устройстве">🗑 Очистить чат</button>
                 </div>
 
                 <div class="input-container">
                     <div class="input-wrapper">
-                        <!-- Скрытый инпут для файлов -->
                         <input type="file" id="fileField" style="display:none" onchange="handleFileSelect(this)">
                         
                         <div class="input-icon" onclick="document.getElementById('fileField').click()" title="Выбрать документ, фото или аудио">
@@ -443,12 +451,59 @@
         let typingTimeout;
         let isConnectedState = false;
         
+        // Массив для хранения истории сообщений текущей вкладки
+        let chatHistory = [];
+
         const rtcConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
             ]
         };
+
+        // Загрузка истории при старте страницы
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('p2p_chat_history');
+            if (saved) {
+                try {
+                    chatHistory = JSON.parse(saved);
+                    chatHistory.forEach(msg => {
+                        if (msg.msgType === 'text') {
+                            renderTextMessage(msg.payload, msg.side);
+                        } else if (msg.msgType === 'file') {
+                            renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Ошибка чтения истории из LocalStorage:", e);
+                }
+            } else {
+                // Если истории нет, выводим приветственное сообщение по умолчанию
+                renderTextMessage("Привет! Это приватный P2P-мессенджер без серверов. Сгенерируй токен слева или вставь токен друга для начала сессии. История сообщений теперь сохраняется локально на твоем устройстве!", 'in');
+            }
+        });
+
+        function saveToStorage(messageObject) {
+            chatHistory.push(messageObject);
+            // Лимит на размер хранилища (чтобы тяжелые Base64 файлы не переполнили 5МБ лимит localStorage)
+            // При желании тяжелые файлы можно исключать из сохранения, проверяя messageObject.payload.length
+            try {
+                localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
+            } catch(e) {
+                console.warn("LocalStorage переполнен, старые сообщения удалены.");
+                chatHistory.shift();
+                localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
+            }
+        }
+
+        function clearHistory() {
+            if (confirm("Вы уверены, что хотите полностью стереть историю чата на этом устройстве?")) {
+                localStorage.removeItem('p2p_chat_history');
+                chatHistory = [];
+                document.getElementById('messages').innerHTML = '';
+                renderTextMessage("История очищена.", 'in');
+            }
+        }
 
         function setStatus(text, state = 'default') {
             const statusEl = document.getElementById('status');
@@ -458,14 +513,11 @@
             if (state === 'typing') statusEl.classList.add('typing');
         }
 
-        // Универсальное переключение панели для ПК и мобилок
         function togglePanel() {
             const panel = document.getElementById('p2pPanel');
             if (window.innerWidth <= 680) {
-                // На мобильных переключаем класс .open (сдвиг слева)
                 panel.classList.toggle('open');
             } else {
-                // На десктопе переключаем класс .collapsed (отрицательный margin-left)
                 panel.classList.toggle('collapsed');
             }
         }
@@ -489,8 +541,6 @@
                 const sendBtn = document.getElementById('btnSend');
                 sendBtn.disabled = false;
                 sendBtn.classList.add('active');
-                
-                // Авто-закрытие настроек при успешном соединении
                 document.getElementById('p2pPanel').classList.remove('open');
             };
             
@@ -512,12 +562,15 @@
                             setStatus('В сети', 'connected');
                         }
                     } else if (data.type === 'text') {
-                        appendMessage(data.payload, 'in');
+                        renderTextMessage(data.payload, 'in');
+                        saveToStorage({ msgType: 'text', payload: data.payload, side: 'in' });
                     } else if (data.type === 'file') {
-                        appendFileMessage(data.filename, data.filetype, data.payload, 'in');
+                        renderFileMessage(data.filename, data.filetype, data.payload, 'in');
+                        saveToStorage({ msgType: 'file', filename: data.filename, filetype: data.filetype, payload: data.payload, side: 'in' });
                     }
                 } catch(err) {
-                    appendMessage(e.data, 'in');
+                    renderTextMessage(e.data, 'in');
+                    saveToStorage({ msgType: 'text', payload: e.data, side: 'in' });
                 }
             };
         }
@@ -592,9 +645,10 @@
             const packet = { type: 'text', payload: text };
             dataChannel.send(JSON.stringify(packet));
             
-            appendMessage(text, 'out');
-            input.value = '';
+            renderTextMessage(text, 'out');
+            saveToStorage({ msgType: 'text', payload: text, side: 'out' });
             
+            input.value = '';
             dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
         }
 
@@ -612,13 +666,15 @@
                 };
                 
                 dataChannel.send(JSON.stringify(packet));
-                appendFileMessage(file.name, file.type, e.target.result, 'out');
+                renderFileMessage(file.name, file.type, e.target.result, 'out');
+                saveToStorage({ msgType: 'file', filename: file.name, filetype: file.type, payload: e.target.result, side: 'out' });
                 input.value = '';
             };
             reader.readAsDataURL(file);
         }
 
-        function appendMessage(text, side) {
+        // Рендер текстовых блоков в DOM
+        function renderTextMessage(text, side) {
             const container = document.getElementById('messages');
             const wrapper = document.createElement('div');
             wrapper.className = `msg-wrapper ${side}`;
@@ -632,7 +688,8 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        function appendFileMessage(filename, filetype, dataUrl, side) {
+        // Рендер медиа/документов блоков в DOM
+        function renderFileMessage(filename, filetype, dataUrl, side) {
             const container = document.getElementById('messages');
             const wrapper = document.createElement('div');
             wrapper.className = `msg-wrapper ${side}`;
@@ -645,12 +702,11 @@
                 img.src = dataUrl;
                 box.appendChild(img);
             } else if (filetype.startsWith('audio/')) {
-                // Рендерим встроенный аудиопроигрыватель
                 const audio = document.createElement('audio');
                 audio.src = dataUrl;
                 audio.controls = true;
+                audio.preload = "metadata";
                 
-                // Отображаем название файла над плеером
                 const metaText = document.createElement('div');
                 metaText.style.fontSize = '0.8rem';
                 metaText.style.marginBottom = '4px';
