@@ -626,6 +626,7 @@
             color: var(--text-main);
             font-weight: 500;
             font-size: 0.75rem;
+            margin-bottom: 2px;
         }
 
         .active-reply-text {
@@ -1197,7 +1198,7 @@
                 </div>
                 
                 <div class="call-interactive-btn-container">
-                    <button class="call-action-circle hangup" onclick="hangUpCall()">
+                    <button class="call-action-circle hangup" onclick="hangUpCall(true)">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                     <span class="call-btn-description">Завершить</span>
@@ -1485,7 +1486,7 @@
             try {
                 const iv = new Uint8Array(packet.iv.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
                 const encryptedBytes = new Uint8Array(atob(packet.ciphertext).split("").map(c => c.charCodeAt(0)));
-                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, derivedE2eeKey, encryptedBytes);
+                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, encryptedBytes);
                 return new TextDecoder().decode(decrypted);
             } catch (e) { return "🚨 [Неверный ключ шифрования]"; }
         }
@@ -1500,7 +1501,7 @@
                 updateStatusBadge();
                 autoConnectToKnownPeers();
                 
-                // Если зашли по инвайту, отправляем агрессивный запрос на коннект
+                // Если зашли по инвайту, отправляем запрос на коннект
                 const urlParams = new URLSearchParams(window.location.search);
                 const inviteId = urlParams.get('invite');
                 if (inviteId && inviteId.trim() !== "" && inviteId !== myUserId) {
@@ -1522,11 +1523,16 @@
                     return;
                 }
                 
-                if (callState !== 'idle') {
-                    call.close();
+                // Сигналинг уже перевел нас в нужную фазу, просто подхватываем медиа-канал
+                if (callState === 'ringing' || callState === 'active') {
+                    currentCall = call;
+                    if (callState === 'active') {
+                        call.answer(localStream);
+                    }
+                    setupMediaCallHandlers(call);
                     return;
                 }
-                
+
                 currentCall = call;
                 currentCallType = isVideoCall ? 'video' : 'audio';
                 showCallOverlay('ringing', call.peer);
@@ -1676,7 +1682,6 @@
                 if (!dot) return;
                 
                 if (room.type === 'group') {
-                    // Групповой стрим активен, если есть хоть один человек
                     let anyOnline = room.id === 'global_main' ? (onlinePeers.size > 0) : room.participants.some(p => onlinePeers.has(p));
                     dot.classList.toggle('online', anyOnline);
                 } else {
@@ -1699,11 +1704,11 @@
             if (typingTimeout) clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
                 sendTypingStatus('active');
-            }, 2000);
+            }, 1500);
         }
 
         function sendTypingStatus(forcedStatus = null) {
-            let currentStatus = forcedStatus || 'typing';
+            let currentStatus = forcedStatus || 'active';
             if (isRecording) currentStatus = 'recording_voice';
             if (callState === 'active' || callState === 'calling' || callState === 'ringing') currentStatus = 'in_call';
 
@@ -1734,7 +1739,7 @@
                     delete userStatuses[roomId][senderId];
                     updateHeaderStatusTextDOM();
                 }
-            }, 4000);
+            }, 3000);
 
             if (roomId === activeChatId) {
                 updateHeaderStatusTextDOM();
@@ -1753,13 +1758,13 @@
                 let textRepresentation = 'в сети';
                 if (info.status === 'typing') textRepresentation = 'печатает...';
                 if (info.status === 'recording_voice') textRepresentation = 'записывает голосовое...';
-                if (info.status === 'in_call') textRepresentation = 'звонит...';
+                if (info.status === 'in_call') textRepresentation = 'разговаривает...';
                 if (info.status === 'sending_file') textRepresentation = 'отправляет файл...';
                 
                 if (roomData.type === 'group') {
-                    activeStrings.push(`${pId}: ${textRepresentation}`);
+                    if(info.status !== 'active') activeStrings.push(`${pId} ${textRepresentation}`);
                 } else {
-                    activeStrings.push(textRepresentation);
+                    if(info.status !== 'active') activeStrings.push(textRepresentation);
                 }
             }
 
@@ -1810,15 +1815,15 @@
 
                 if (room.type === 'user') {
                     showCallOverlay('calling', room.id);
-                    const call = peer.call(room.id, localStream, { metadata: { type: type } });
-                    currentCall = call;
-                    setupMediaCallHandlers(call);
+                    if (connections[room.id] && connections[room.id].open) {
+                        connections[room.id].send({ type: 'call_system', action: 'invite', callType: type });
+                    }
                 } else {
                     showCallOverlay('active', room.name);
                     let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
                     targets.forEach(tId => {
                         if (connections[tId] && connections[tId].open) {
-                            connections[tId].send({ type: 'call_system', action: 'group_call_started', roomId: room.id });
+                            connections[tId].send({ type: 'call_system', action: 'group_call_started', roomId: room.id, callType: type });
                             const call = peer.call(tId, localStream, { metadata: { type: type } });
                             activeCalls[tId] = call;
                             setupMediaCallHandlers(call);
@@ -1827,32 +1832,54 @@
                 }
             } catch (err) {
                 alert('Не удалось получить доступ к медиаустройствам: ' + err);
-                hangUpCall();
+                hangUpCall(true);
             }
         }
 
         function handleCallSystemMessage(senderId, data) {
-            if (data.action === 'group_call_started') {
+            if (data.action === 'invite') {
+                if (callState !== 'idle') {
+                    if (connections[senderId] && connections[senderId].open) {
+                        connections[senderId].send({ type: 'call_system', action: 'reject' });
+                    }
+                    return;
+                }
+                currentCallType = data.callType;
+                showCallOverlay('ringing', senderId);
+            } 
+            else if (data.action === 'accept') {
+                if (callState === 'calling') {
+                    showCallOverlay('active', senderId);
+                    const call = peer.call(senderId, localStream, { metadata: { type: currentCallType } });
+                    currentCall = call;
+                    setupMediaCallHandlers(call);
+                }
+            } 
+            else if (data.action === 'reject' || data.action === 'hangup') {
+                hangUpCall(false);
+            }
+            else if (data.action === 'group_call_started') {
                 if (callState === 'idle' && activeChatId === data.roomId) {
+                    currentCallType = data.callType;
                     showCallOverlay('ringing', rooms.find(r => r.id === data.roomId)?.name || 'Группа');
                 }
             }
         }
 
         async function acceptIncomingCall() {
-            if (!currentCall && rooms.find(r => r.id === activeChatId)?.type !== 'group') return;
+            const room = rooms.find(r => r.id === activeChatId);
             try {
                 const constraints = { audio: true, video: currentCallType === 'video' };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 displayLocalStream();
 
-                if (currentCall) {
-                    currentCall.answer(localStream);
-                    setupMediaCallHandlers(currentCall);
-                    showCallOverlay('active', currentCall.peer);
-                } else {
-                    const room = rooms.find(r => r.id === activeChatId);
-                    showCallOverlay('active', room.name);
+                showCallOverlay('active', room?.name || 'Разговор');
+
+                if (room && room.type === 'user') {
+                    if (connections[room.id] && connections[room.id].open) {
+                        connections[room.id].send({ type: 'call_system', action: 'accept' });
+                    }
+                } else if (room && room.type === 'group') {
                     let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
                     targets.forEach(tId => {
                         if (connections[tId] && connections[tId].open) {
@@ -1864,7 +1891,7 @@
                 }
             } catch (err) {
                 alert('Ошибка доступа к устройствам: ' + err);
-                hangUpCall();
+                hangUpCall(true);
             }
         }
 
@@ -1884,7 +1911,7 @@
             const room = rooms.find(r => r.id === activeChatId);
             if (!(room && room.type === 'group' && callState === 'active')) {
                 if (currentCall && currentCall.peer === peerId) {
-                    hangUpCall();
+                    hangUpCall(false);
                 }
             }
         }
@@ -1952,7 +1979,23 @@
             }
         }
 
-        function hangUpCall() {
+        function hangUpCall(notifyRemote = true) {
+            const room = rooms.find(r => r.id === activeChatId);
+            if (notifyRemote) {
+                if (room && room.type === 'user') {
+                    if (connections[room.id] && connections[room.id].open) {
+                        connections[room.id].send({ type: 'call_system', action: 'hangup' });
+                    }
+                } else if (room && room.type === 'group') {
+                    let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
+                    targets.forEach(tId => {
+                        if (connections[tId] && connections[tId].open) {
+                            connections[tId].send({ type: 'call_system', action: 'hangup' });
+                        }
+                    });
+                }
+            }
+
             if (currentCall) currentCall.close();
             Object.values(activeCalls).forEach(c => c.close());
             if (localStream) {
@@ -2176,7 +2219,7 @@
         function closePanelOnMobileClick() {
             const panel = document.getElementById('p2pPanel');
             if (window.innerWidth <= 768 && panel.classList.contains('open')) {
-                panel.classList.remove('remove');
+                panel.classList.remove('open');
             }
         }
 
@@ -2194,21 +2237,15 @@
                 targets = [activeChatId];
             }
 
-            let deliveredToAny = false;
-
             targets.forEach(tId => {
                 if (connections[tId] && connections[tId].open) {
                     connections[tId].send({ encryptedPayload: cryptoContainer });
-                    deliveredToAny = true;
                 } else {
-                    // Сохраняем в оффлайн очередь, если это не общая комната
                     if (currentRoom && currentRoom.type === 'user') {
                         pushToOfflineQueue(tId, cryptoContainer);
                     }
                 }
             });
-            
-            return deliveredToAny;
         }
 
         function pushToOfflineQueue(targetPeerId, encryptedPayload) {
@@ -2228,7 +2265,6 @@
                 peerPackets.forEach(pkt => {
                     connections[peerId].send({ encryptedPayload: pkt.payload });
                 });
-                // Очищаем отправленное из очереди
                 offlineQueue = offlineQueue.filter(q => q.targetPeer !== peerId);
                 localStorage.setItem('p2p_offline_queue', JSON.stringify(offlineQueue));
             }
@@ -2309,7 +2345,7 @@
                     mediaRecorder.start(); isRecording = true; micBtn.classList.add('recording');
                     sendTypingStatus('recording_voice');
                 } catch (err) { alert('Микрофон недоступен.'); }
-            } else { if (mediaRecorder) mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording'); sendTypingStatus('typing'); }
+            } else { if (mediaRecorder) mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording'); sendTypingStatus('active'); }
         }
 
         function parseMarkdownAndLinks(text) {
