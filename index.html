@@ -10,52 +10,62 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --bg-outer: #f4f5f6;
-            --bg-card: #ffffff;
-            --bg-input: #f0f2f5;
-            --border: #f0f0f2;
-            --text-main: #1f2328;
-            --text-muted: #636c76;
+            /* Минималистичная черно-белая палитра в стиле Vercel (Темная по умолчанию) */
+            --bg-outer: #000000;
+            --bg-card: #000000;
+            --bg-input: #111111;
+            --border: #333333;
+            --text-main: #ffffff;
+            --text-muted: #888888;
             --accent: #000000;
+            --accent-hover: #cccccc;
             --accent-text: #ffffff;
-            --bubble-in: #ffffff;
-            --bubble-in-border: #e1e4e8;
-            --bubble-out: #f0f2f5;
-            --badge-bg: #fff8ec;
-            --badge-text: #b07d1a;
-            --icon-color: #636c76;
+            --bubble-in: #111111;
+            --bubble-in-border: #333333;
+            --bubble-out: #ffffff;
+            --bubble-out-text: #000000;
+            --badge-bg: #111111;
+            --badge-text: #ffffff;
+            --icon-color: #888888;
             
-            --tg-voice-bg: #f4f5f7;
-            --tg-voice-btn: #2481cc;
-            --tg-voice-btn-icon: #ffffff;
-            --tg-voice-seek: #d0d5dd;
-            --tg-voice-progress: #2481cc;
-            --reply-line: #000000;
+            --tg-voice-bg: #111111;
+            --tg-voice-btn: #ffffff;
+            --tg-voice-btn-icon: #000000;
+            --tg-voice-seek: #333333;
+            --tg-voice-progress: #ffffff;
+            --reply-line: #ffffff;
+            --tg-chat-active: #111111;
+            --tg-avatar-bg: #000000;
         }
 
-        @media (prefers-color-scheme: dark) {
+        /* Светлая тема */
+        @media (prefers-color-scheme: light) {
             :root {
-                --bg-outer: #0a0b0d;
-                --bg-card: #16181c;
-                --bg-input: #22262c;
-                --border: #2d3139;
-                --text-main: #e6edf3;
-                --text-muted: #8b949e;
-                --accent: #ffffff;
-                --accent-text: #16181c;
-                --bubble-in: #1f242c;
-                --bubble-in-border: #2d3139;
-                --bubble-out: #282e38;
-                --badge-bg: #2c2214;
-                --badge-text: #e3b341;
-                --icon-color: #8b949e;
-
-                --tg-voice-bg: #1a222c;
-                --tg-voice-btn: #5288c1;
+                --bg-outer: #fafafa;
+                --bg-card: #ffffff;
+                --bg-input: #f1f3f4;
+                --border: #e5e5e5;
+                --text-main: #000000;
+                --text-muted: #666666;
+                --accent: #000000;
+                --accent-hover: #333333;
+                --accent-text: #ffffff;
+                --bubble-in: #f1f3f4;
+                --bubble-in-border: #e5e5e5;
+                --bubble-out: #000000;
+                --bubble-out-text: #ffffff;
+                --badge-bg: #f1f3f4;
+                --badge-text: #000000;
+                --icon-color: #666666;
+                
+                --tg-voice-bg: #f1f3f4;
+                --tg-voice-btn: #000000;
                 --tg-voice-btn-icon: #ffffff;
-                --tg-voice-seek: #343e4d;
-                --tg-voice-progress: #5288c1;
-                --reply-line: #ffffff;
+                --tg-voice-seek: #e5e5e5;
+                --tg-voice-progress: #000000;
+                --reply-line: #000000;
+                --tg-chat-active: #f1f3f4;
+                --tg-avatar-bg: #ffffff;
             }
         }
 
@@ -76,16 +86,16 @@
             height: 100dvh;
             overflow: hidden;
             padding: 20px;
+            color: var(--text-main);
         }
 
         .workspace {
             width: 100%;
-            max-width: 960px;
+            max-width: 1100px;
             height: 100%;
             background-color: var(--bg-card);
-            border-radius: 24px;
+            border-radius: 20px;
             border: 1px solid var(--border);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -103,10 +113,23 @@
             background-color: var(--bg-card);
         }
 
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+        }
+
         .header-title {
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 600;
             color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .header-status-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            height: 16px;
+            margin-top: 2px;
         }
 
         .header-controls {
@@ -120,52 +143,42 @@
             color: var(--badge-text);
             padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
             transition: all 0.3s;
+            border: 1px solid var(--border);
         }
         .status-badge::before {
             content: "";
             display: inline-block;
             width: 6px;
             height: 6px;
-            background-color: var(--badge-text);
+            background-color: var(--text-muted);
             border-radius: 50%;
         }
-        .status-badge.connected {
-            background-color: rgba(35, 165, 90, 0.1);
-            color: #23a55a;
-        }
         .status-badge.connected::before {
-            background-color: #23a55a;
-        }
-        .status-badge.typing {
-            background-color: rgba(0, 0, 0, 0.05);
-            color: var(--text-muted);
-        }
-        .status-badge.typing::before {
-            background-color: var(--text-muted);
-            animation: pulse 1s infinite alternate;
-        }
-
-        @keyframes pulse {
-            from { opacity: 0.3; } to { opacity: 1; }
+            background-color: #2ec4b6;
         }
 
         .btn-icon {
             background: transparent;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            width: 36px;
-            height: 36px;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            color: var(--text-muted);
+            color: var(--text-main);
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .btn-icon:hover {
+            background-color: var(--bg-input);
+            border-color: var(--text-main);
         }
 
         .main-content {
@@ -178,66 +191,56 @@
         .p2p-panel {
             width: 300px;
             border-right: 1px solid var(--border);
-            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
+            overflow: hidden;
             max-height: 100%;
             background-color: var(--bg-card);
             z-index: 30;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease, margin-left 0.2s ease;
             flex-shrink: 0;
-            scrollbar-width: thin;
         }
 
         .p2p-panel.collapsed {
             margin-left: -300px;
         }
 
-        .panel-title {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-top: 8px;
+        .panel-settings-block {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: var(--bg-card);
         }
 
-        .p2p-panel button {
-            background-color: var(--accent);
-            color: var(--accent-text);
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
+        .panel-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .p2p-panel button.action-btn {
+            background-color: #000000;
+            color: #ffffff;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.8rem;
             cursor: pointer;
-            flex-shrink: 0;
+            transition: background 0.2s, color 0.2s;
+        }
+        .p2p-panel button.action-btn:hover {
+            background-color: var(--bg-input);
+            color: var(--text-main);
         }
 
         .p2p-panel button:disabled {
-            opacity: 0.4;
+            opacity: 0.3;
             cursor: not-allowed;
-        }
-
-        .p2p-panel button.danger-link {
-            background-color: transparent;
-            border: 1px dashed rgba(255, 77, 79, 0.3);
-            color: #ff4d4f;
-            margin-top: auto;
-            padding: 8px;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 8px;
-            background-color: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            outline: none;
-            font-size: 0.85rem;
         }
 
         .id-input-wrapper {
@@ -247,13 +250,176 @@
 
         .id-input-wrapper input {
             flex: 1;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 8px 14px;
+            border-radius: 20px;
             background-color: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text-main);
             outline: none;
+            font-size: 0.8rem;
+            transition: border-color 0.2s;
+        }
+        .id-input-wrapper input:focus {
+            border-color: var(--text-muted);
+        }
+
+        .chats-section-title {
+            padding: 16px 16px 6px 16px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chats-list-container {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .tg-chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+        .tg-chat-item:hover {
+            background-color: var(--bg-input);
+        }
+        .tg-chat-item.active {
+            background-color: var(--tg-chat-active);
+        }
+
+        .tg-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background-color: var(--tg-avatar-bg);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            border: 1px solid var(--border);
+        }
+
+        .tg-chat-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .tg-chat-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tg-chat-name {
+            font-weight: 500;
             font-size: 0.85rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tg-chat-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .tg-chat-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tg-chat-preview {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 10px;
+        }
+
+        .chat-delete-btn {
+            background: transparent;
+            border: none;
+            color: #ff4d4f;
+            cursor: pointer;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 4px;
+        }
+        .tg-chat-item:hover .chat-delete-btn {
+            opacity: 1;
+        }
+
+        .panel-footer-block {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            background-color: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .participant-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 110px;
+            overflow-y: auto;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background-color: var(--bg-input);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .participant-item .disconnect-btn {
+            background: transparent;
+            color: #ff4d4f;
+            border: none;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+
+        .add-chat-modal {
+            position: absolute;
+            bottom: 60px;
+            left: 16px;
+            right: 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            animation: menuFadeIn 0.15s ease;
         }
 
         .chat-area {
@@ -284,11 +450,19 @@
         .msg-wrapper.in { align-self: flex-start; align-items: flex-start; }
         .msg-wrapper.out { align-self: flex-end; align-items: flex-end; }
 
+        .msg-sender-id {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            padding: 0 4px;
+            font-weight: 500;
+        }
+
         .msg-box {
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 0.95rem;
-            line-height: 1.45;
+            padding: 10px 16px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            line-height: 1.5;
             word-break: break-word;
             position: relative;
             cursor: pointer;
@@ -302,11 +476,12 @@
         }
         .msg-wrapper.out .msg-box {
             background-color: var(--bubble-out);
-            color: var(--text-main);
+            color: var(--bubble-out-text);
+            border: 1px solid var(--bubble-out);
             border-top-right-radius: 4px;
         }
 
-        .msg-box img {
+        .msg-box img, .msg-box video {
             max-width: 100%;
             max-height: 250px;
             border-radius: 12px;
@@ -315,7 +490,7 @@
         }
 
         .msg-box a {
-            color: var(--tg-voice-progress);
+            color: inherit;
             text-decoration: underline;
         }
 
@@ -329,35 +504,35 @@
         .msg-reaction-badge {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            animation: menuFadeIn 0.15s ease;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
         }
 
         .reply-quote {
             display: flex;
             flex-direction: column;
-            background: rgba(0, 0, 0, 0.03);
-            border-left: 3px solid var(--reply-line);
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-left: 2px solid var(--reply-line);
             padding: 4px 10px;
             margin-bottom: 6px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-align: left;
+        }
+        .msg-wrapper.out .reply-quote {
+            background: rgba(0, 0, 0, 0.05);
+            border-left: 2px solid var(--reply-line);
         }
         
         .reply-quote-sender {
-            color: var(--reply-line);
-            font-weight: 700;
-            font-size: 0.8rem;
+            color: inherit;
+            font-weight: 600;
+            font-size: 0.75rem;
             margin-bottom: 2px;
         }
 
         .reply-quote-text {
-            color: var(--text-main);
-            opacity: 0.75;
+            opacity: 0.8;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -369,9 +544,9 @@
             align-items: center;
             justify-content: space-between;
             background-color: var(--bg-card);
-            border-left: 3px solid var(--reply-line);
+            border-left: 2px solid var(--reply-line);
             padding: 8px 16px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             border-top: 1px solid var(--border);
         }
 
@@ -382,9 +557,9 @@
         }
 
         .active-reply-title {
-            color: var(--reply-line);
-            font-weight: 600;
-            font-size: 0.8rem;
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 0.75rem;
         }
 
         .active-reply-text {
@@ -405,17 +580,19 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            background-color: var(--tg-voice-bg);
+            background-color: rgba(255,255,255,0.05);
             padding: 8px 14px;
-            border-radius: 14px;
+            border-radius: 12px;
             min-width: 220px;
             margin-top: 4px;
-            user-select: none;
+        }
+        .msg-wrapper.out .tg-voice-player {
+            background-color: rgba(0,0,0,0.05);
         }
 
         .tg-play-btn {
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background-color: var(--tg-voice-btn);
             color: var(--tg-voice-btn-icon);
@@ -425,6 +602,7 @@
             border: none;
             cursor: pointer;
             flex-shrink: 0;
+            font-size: 0.8rem;
         }
 
         .tg-voice-info {
@@ -444,9 +622,8 @@
 
         .tg-waveform-bg {
             width: 100%;
-            height: 3px;
+            height: 2px;
             background-color: var(--tg-voice-seek);
-            border-radius: 2px;
             position: relative;
             overflow: hidden;
         }
@@ -458,31 +635,28 @@
             height: 100%;
             width: 0%;
             background-color: var(--tg-voice-progress);
-            transition: width 0.1s linear;
         }
 
         .tg-time {
             font-size: 0.75rem;
             color: var(--text-muted);
-            font-variant-numeric: tabular-nums;
         }
 
         .file-link {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-main);
+            color: inherit;
             text-decoration: none;
             font-weight: 500;
             margin-top: 4px;
         }
 
         .modes-bar {
-            padding: 0 20px;
+            padding: 12px 20px 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 4px;
             flex-shrink: 0;
             gap: 8px;
         }
@@ -496,9 +670,10 @@
             display: flex;
             align-items: center;
             background-color: var(--bg-input);
-            border-radius: 12px;
-            padding: 2px 8px;
+            border-radius: 20px;
+            padding: 4px 12px;
             width: 180px;
+            border: 1px solid var(--border);
         }
 
         .search-wrapper input {
@@ -514,16 +689,24 @@
             background-color: transparent;
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s;
         }
         .pill-btn.active {
-            background-color: var(--accent);
-            color: var(--accent-text);
-            border-color: var(--accent);
+            background-color: #000000;
+            color: #ffffff;
+            border-color: var(--border);
+        }
+        @media (prefers-color-scheme: dark) {
+            .pill-btn.active {
+                background-color: #ffffff;
+                color: #000000;
+                border-color: #ffffff;
+            }
         }
 
         .input-container {
@@ -533,18 +716,23 @@
             flex-shrink: 0;
             background-color: var(--bg-card);
             border-top: 1px solid var(--border);
+            margin-top: auto;
         }
 
         .input-wrapper {
             background-color: var(--bg-input);
-            border-radius: 24px;
+            border-radius: 30px;
             display: flex;
             align-items: center;
-            padding: 4px 6px 4px 16px;
+            padding: 4px 6px;
             gap: 8px;
             position: relative;
             width: 100%;
-            box-sizing: border-box;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+        .input-wrapper:focus-within {
+            border-color: var(--text-muted);
         }
 
         .input-wrapper input[type="text"] {
@@ -553,9 +741,10 @@
             border: none;
             outline: none;
             color: var(--text-main);
-            font-size: 0.95rem;
-            height: 40px;
+            font-size: 0.9rem;
+            height: 38px;
             min-width: 0;
+            padding-left: 6px;
         }
 
         .input-icon {
@@ -566,9 +755,13 @@
             cursor: pointer;
             transition: color 0.2s;
             flex-shrink: 0;
-            padding: 6px;
             width: 32px;
             height: 32px;
+            border-radius: 50%;
+        }
+        .input-icon:hover {
+            color: var(--text-main);
+            background-color: rgba(255,255,255,0.05);
         }
 
         .input-icon.recording {
@@ -576,26 +769,27 @@
             animation: pulse 0.8s infinite alternate;
         }
 
+        @keyframes pulse {
+            from { opacity: 1; } to { opacity: 0.4; }
+        }
+
         .btn-send {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            background-color: var(--border);
+            background-color: transparent;
             border: none;
             display: flex;
             justify-content: center;
             align-items: center;
-            cursor: not-allowed;
+            cursor: pointer;
             color: var(--text-muted);
             transition: all 0.2s;
             flex-shrink: 0;
-            opacity: 0.6;
         }
-        .btn-send.active {
-            background-color: var(--accent);
-            color: var(--accent-text);
-            cursor: pointer;
-            opacity: 1;
+        .btn-send:hover {
+            color: var(--text-main);
+            background-color: rgba(255,255,255,0.05);
         }
 
         .p2p-progress-toast {
@@ -603,32 +797,33 @@
             top: 60px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            color: #fff;
-            padding: 8px 16px;
+            background: var(--text-main);
+            color: var(--bg-card);
+            padding: 6px 16px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             display: none;
             z-index: 500;
+            font-weight: 500;
         }
 
         .msg-context-menu {
             position: fixed;
             z-index: 1000;
-            width: 220px;
+            width: 200px;
             background-color: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             display: none;
             flex-direction: column;
             overflow: hidden;
             padding: 6px;
-            animation: menuFadeIn 0.12s cubic-bezier(0.1, 0.9, 0.2, 1);
+            animation: menuFadeIn 0.1s ease;
         }
 
         @keyframes menuFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
+            from { opacity: 0; transform: scale(0.98); }
             to { opacity: 1; transform: scale(1); }
         }
 
@@ -642,57 +837,25 @@
         }
 
         .reaction-item {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            user-select: none;
             transition: transform 0.1s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 26px;
-            height: 26px;
         }
-        .reaction-item:hover {
-            transform: scale(1.25);
-        }
-        .reaction-item.more-btn {
-            background-color: var(--bg-input);
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
+        .reaction-item:hover { transform: scale(1.15); }
 
         .menu-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 14px;
+            padding: 8px 10px;
             color: var(--text-main);
-            font-size: 0.95rem;
-            font-weight: 500;
-            border-radius: 10px;
+            font-size: 0.85rem;
+            border-radius: 6px;
             cursor: pointer;
-            user-select: none;
-            transition: background 0.1s;
         }
-        .menu-item:hover {
-            background-color: var(--bg-input);
-        }
-        .menu-item svg {
-            color: var(--text-muted);
-            flex-shrink: 0;
-        }
-        .menu-item.danger {
-            color: #ff4d4f;
-        }
-        .menu-item.danger svg {
-            color: #ff4d4f;
-        }
+        .menu-item:hover { background-color: var(--bg-input); }
+        .menu-item.danger { color: #ff4d4f; }
 
-        /* Дополнительные медиа/звонки UI */
         .shared-media-container {
             display: none;
             flex: 1;
@@ -713,34 +876,193 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
         }
+
+        /* ИНТЕРФЕЙС ЗВОНКОВ ПО МАКЕТУ ПОЛЬЗОВАТЕЛЯ */
         .call-overlay {
             position: absolute;
-            top: 0; left:0; right:0; bottom:0;
-            background: rgba(0,0,0,0.85);
-            z-index: 1000;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #a66fcc; /* Фиолетовый оттенок с референса */
+            z-index: 2000;
             display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px 60px 20px;
+            color: #ffffff;
+            animation: fadeIn 0.2s ease;
+            user-select: none;
+        }
+        
+        .call-window-controls {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            padding-right: 10px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+
+        .call-main-content {
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: white;
-            gap: 20px;
-        }
-        .call-btn-hangup {
-            background: #ff4d4f;
-            border: none; color: white;
-            padding: 12px 24px; border-radius: 30px;
-            cursor: pointer; font-weight: bold;
+            flex: 1;
+            width: 100%;
+            position: relative;
         }
 
-        @media (max-width: 680px) {
+        /* Задний фон из иконок щитов как на референсе */
+        .call-shields-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0;
+            pointer-events: none;
+            opacity: 0.15;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: scale(2.5);
+        }
+
+        .call-avatar-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            z-index: 2;
+        }
+
+        .call-profile-pic {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            font-weight: 400;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        
+        .call-profile-pic img, .call-profile-pic video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .call-username {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 6px;
+            color: #ffffff;
+            z-index: 2;
+        }
+
+        .call-status-label {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 300;
+            z-index: 2;
+        }
+
+        .call-footer-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .call-action-row {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .call-interactive-btn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 75px;
+        }
+
+        .call-action-circle {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            transition: background-color 0.2s, transform 0.1s;
+            position: relative;
+        }
+        .call-action-circle:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .call-action-circle:active {
+            transform: scale(0.96);
+        }
+        
+        .call-action-circle.hangup {
+            background-color: #d94f4f;
+        }
+        .call-action-circle.hangup:hover {
+            background-color: #e55a5a;
+        }
+        
+        .call-action-circle.answer-green {
+            background-color: #4fd970;
+        }
+        .call-action-circle.answer-green:hover {
+            background-color: #5ae57c;
+        }
+
+        .call-circle-badge {
+            position: absolute;
+            top: -2px; right: -2px;
+            width: 16px; height: 16px;
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+
+        .call-btn-description {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; } to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
             body { padding: 0; }
             .workspace { max-width: 100%; height: 100dvh; border-radius: 0; border: none; }
-            .input-container { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
             .p2p-panel { 
-                position: absolute; left: 0; top: 0; bottom: 0; width: 290px;
-                box-shadow: 10px 0 30px rgba(0,0,0,0.2);
+                position: absolute; left: 0; top: 0; bottom: 0; width: 280px;
+                box-shadow: 10px 0 30px rgba(0,0,0,0.7);
                 transform: translateX(-100%); margin-left: 0 !important;
             }
             .p2p-panel.open { transform: translateX(0); }
@@ -751,66 +1073,137 @@
 
     <div class="p2p-progress-toast" id="p2pProgress">Передача: 0%</div>
 
-    <div class="workspace">
-        <div class="call-overlay" id="callOverlay">
-            <h2 id="callStatusText">Аудиозвонок...</h2>
-            <audio id="remoteAudio" autoplay></audio>
-            <button class="call-btn-hangup" onclick="hangUpCall()">Завершить</button>
+    <!-- ЭКРАН СИСТЕМЫ ЗВОНКОВ ПО НОВОМУ МАКЕТУ -->
+    <div class="call-overlay" id="callOverlay">
+        <div class="call-window-controls">⏤ &nbsp; 🗖 &nbsp; ✕</div>
+        
+        <div class="call-main-content">
+            <div class="call-shields-bg"></div>
+            <div class="call-avatar-container">
+                <div class="call-profile-pic" id="callAvatarDOM">V</div>
+            </div>
+            <div class="call-username" id="callNameDOM">Вадим</div>
+            <div class="call-status-label" id="callStatusDOM">ожидание...</div>
         </div>
+        
+        <div class="call-footer-wrapper">
+            <div class="call-action-row">
+                <div class="call-interactive-btn-container">
+                    <button class="call-action-circle" id="callShareBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    </button>
+                    <span class="call-btn-description">Экран</span>
+                </div>
+                
+                <div class="call-interactive-btn-container">
+                    <button class="call-action-circle" id="callVideoBtn" onclick="toggleCallVideo()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        <div class="call-circle-badge">⌃</div>
+                    </button>
+                    <span class="call-btn-description">Вкл. видео</span>
+                </div>
+                
+                <div class="call-interactive-btn-container">
+                    <button class="call-action-circle hangup" onclick="hangUpCall()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <span class="call-btn-description">Завершить</span>
+                </div>
 
+                <div class="call-interactive-btn-container" id="acceptCallContainer">
+                    <button class="call-action-circle answer-green" onclick="acceptIncomingCall()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </button>
+                    <span class="call-btn-description">Ответить</span>
+                </div>
+                
+                <div class="call-interactive-btn-container">
+                    <button class="call-action-circle" id="callMuteBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        <div class="call-circle-badge">⌃</div>
+                    </button>
+                    <span class="call-btn-description">Выкл. звук</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="workspace">
         <div class="header">
-            <div class="header-title" id="chatTitle">Загрузка...</div>
+            <div class="header-title-container">
+                <div class="header-title" id="chatTitle">Загрузка...</div>
+                <div class="header-status-text" id="headerStatusText"></div>
+            </div>
             <div class="header-controls">
-                <button class="btn-icon" id="callBtn" onclick="startAudioCall()" style="display:none;" title="Позвонить пиру">📞</button>
+                <!-- Кнопки вызова (Аудио и Видео) -->
+                <button class="btn-icon" onclick="initiateCall('audio')" title="Аудиозвонок" id="audioCallButton" style="display:none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                </button>
+                <button class="btn-icon" onclick="initiateCall('video')" title="Видеозвонок" id="videoCallButton" style="display:none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 7 16 12 23 17 23 7"></polyline><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                </button>
                 <div id="status" class="status-badge">Инициализация</div>
-                <button class="btn-icon" onclick="togglePanel()" title="Конфигурация шлюза">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1  1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <button class="btn-icon" onclick="togglePanel()" title="Чаты и настройки">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </button>
             </div>
         </div>
 
         <div class="main-content">
+            <!-- ПАНЕЛЬ СТРУКТУРЫ -->
             <div class="p2p-panel" id="p2pPanel">
-                <div class="panel-title">Мой Уникальный ID</div>
-                <div class="id-input-wrapper">
-                    <input type="text" id="myIdField" placeholder="Введите ваш ID">
-                    <button onclick="updateMyId()">ОК</button>
+                <div class="panel-settings-block">
+                    <div class="panel-title">Мой ID</div>
+                    <div class="id-input-wrapper">
+                        <input type="text" id="myIdField" placeholder="Ваш ID">
+                        <button class="action-btn" onclick="updateMyId()">ОК</button>
+                    </div>
+                    
+                    <div class="panel-title">Участники группы</div>
+                    <div class="participant-list" id="participantList"></div>
+
+                    <div class="panel-title">Ключ E2EE</div>
+                    <div class="id-input-wrapper">
+                        <input type="password" id="e2eeKeyField" placeholder="Ключ шифрования" oninput="deriveCryptoKeyFromInput()">
+                    </div>
                 </div>
-                
-                <div class="panel-title">Поиск собеседника</div>
-                <div class="id-input-wrapper">
-                    <input type="text" id="searchIdField" placeholder="ID человека">
-                    <button onclick="searchAndConnect()">Найти</button>
+
+                <div class="chats-section-title">Чаты</div>
+                <div class="chats-list-container" id="chatsListDOM"></div>
+
+                <div class="panel-footer-block" style="position: relative;">
+                    <button class="action-btn" style="width: 100%; margin-bottom: 4px;" onclick="toggleAddChatModal()">+ Добавить чат</button>
+                    
+                    <div class="add-chat-modal" id="addChatModal">
+                        <div class="panel-title">Новое подключение</div>
+                        <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                            <button class="pill-btn active" id="typeUserBtn" onclick="setAddChatType('user')" style="font-size:0.75rem; padding:4px 10px;">Личный чат</button>
+                            <button class="pill-btn" id="typeGroupBtn" onclick="setAddChatType('group')" style="font-size:0.75rem; padding:4px 10px;">Группа</button>
+                        </div>
+                        <div class="id-input-wrapper">
+                            <input type="text" id="chatTargetInput" placeholder="Введите ID собеседника">
+                            <button class="action-btn" onclick="confirmAddChat()">Создать</button>
+                        </div>
+                    </div>
+
+                    <button class="action-btn" style="background: transparent; border: 1px dashed rgba(255,77,79,0.3); color: #ff4d4f; font-size:0.8rem; padding:6px;" onclick="clearHistory()">🗑 Очистить историю</button>
                 </div>
-                
-                <div class="panel-title">Секретный Ключ E2EE</div>
-                <div class="id-input-wrapper">
-                    <input type="password" id="e2eeKeyField" placeholder="Ключ шифрования" oninput="deriveCryptoKeyFromInput()">
-                </div>
-                
-                <label class="panel-title" style="display:block; margin-top:8px; margin-bottom:4px;">ICE-Инфраструктура</label>
-                <select id="iceConfig" onchange="updateIceConfig()">
-                    <option value="global">Cloudflare + Google STUN (Макс. доступность)</option>
-                    <option value="google">Только Google STUN</option>
-                    <option value="local">Localhost / LAN (Без серверов)</option>
-                </select>
-                
-                <button class="danger-link" onclick="clearHistory()">🗑 Очистить историю чата</button>
             </div>
 
+            <!-- ЗОНА ДИАЛОГА -->
             <div class="chat-area">
-                <div class="messages-container" id="messages"></div>
-                <div class="shared-media-container" id="sharedMedia"></div>
-
                 <div class="modes-bar">
                     <div class="modes-left">
                         <button class="pill-btn active" id="tabDialogBtn" onclick="switchTab('dialog')">💬 Диалог</button>
                         <button class="pill-btn" id="tabMediaBtn" onclick="switchTab('media')">🖼 Медиа</button>
                     </div>
                     <div class="search-wrapper" id="searchWrapper">
-                        <input type="text" id="localSearchInput" placeholder="Поиск сообщений..." oninput="handleLocalSearch()">
+                        <input type="text" id="localSearchInput" placeholder="Поиск..." oninput="handleLocalSearch()">
                     </div>
                 </div>
+
+                <div class="messages-container" id="messages"></div>
+                <div class="shared-media-container" id="sharedMedia"></div>
 
                 <div class="active-reply-indicator" id="activeReplyIndicator">
                     <div class="active-reply-info">
@@ -818,7 +1211,7 @@
                         <div class="active-reply-text" id="activeReplyText">Текст...</div>
                     </div>
                     <div class="active-reply-close" onclick="cancelReply()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 </div>
 
@@ -827,17 +1220,17 @@
                         <input type="file" id="fileField" onchange="processFileSelection(this)" style="display:none">
                         
                         <div class="input-icon" onclick="document.getElementById('fileField').click()" title="Выбрать файл">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                         </div>
 
                         <div class="input-icon" id="micBtn" onclick="toggleVoiceRecord()" title="Записать голос">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                         </div>
                         
-                        <input type="text" id="msgInput" placeholder="Введите текст сообщения..." oninput="sendTypingSignal()" onkeydown="if(event.key === 'Enter') sendMessage()" disabled>
+                        <input type="text" id="msgInput" placeholder="Введите текст сообщения..." onkeydown="if(event.key === 'Enter') sendMessage()" oninput="sendTypingStatus('typing')">
                         
-                        <button id="btnSend" class="btn-send" onclick="sendMessage()" disabled>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <button id="btnSend" class="btn-send active" onclick="sendMessage()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                     </div>
                 </div>
@@ -845,6 +1238,7 @@
         </div>
     </div>
 
+    <!-- КОНТЕКСТНОЕ МЕНЮ -->
     <div class="msg-context-menu" id="msgContextMenu">
         <div class="reactions-panel">
             <div class="reaction-item" onclick="triggerReaction('💖')">💖</div>
@@ -852,81 +1246,62 @@
             <div class="reaction-item" onclick="triggerReaction('👌')">👌</div>
             <div class="reaction-item" onclick="triggerReaction('🏆')">🏆</div>
             <div class="reaction-item" onclick="triggerReaction('❤️')">❤️</div>
-            <div class="reaction-item" onclick="triggerReaction('🙏')">🙏</div>
             <div class="reaction-item" onclick="triggerReaction('🔥')">🔥</div>
-            <div class="reaction-item more-btn">∨</div>
         </div>
-        <div class="menu-item" onclick="contextReply()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
-            Ответить
-        </div>
-        <div class="menu-item" onclick="contextCopy()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Копировать
-        </div>
-        <div class="menu-item" onclick="contextForward()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
-            Переслать
-        </div>
-        <div class="menu-item" onclick="contextPin()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.11V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6.11c0 .43-.14.85-.4 1.19L5.44 14a2 2 0 0 0-.44 1.24z"></path></svg>
-            Закрепить
-        </div>
-        <div class="menu-item danger" onclick="contextDelete()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            Удалить
-        </div>
+        <div class="menu-item" onclick="contextReply()">Ответить</div>
+        <div class="menu-item" onclick="contextCopy()">Копировать</div>
+        <div class="menu-item danger" onclick="contextDelete()">Удалить</div>
     </div>
 
     <script>
-        // PEER JS LOGIC
         let peer = null;
-        let dataChannel = null; 
-        let currentCall = null;
-        let localAudioStream = null;
+        let connections = {}; 
         
         let myUserId = '';
-        let targetUserId = ''; 
-
-        let typingTimeout;
-        let heartbeatInterval = null;
-        let isConnectedState = false;
         let chatHistory = [];
         let activeContextMenuTarget = null;
         let currentReplyTarget = null;
         let activeTab = 'dialog';
 
-        let incomingFileBuffer = [];
-        let incomingFileName = '';
-        let incomingFileType = '';
-        let incomingFileReply = null;
+        let activeChatId = 'global_main'; 
+        let rooms = [
+            { id: 'global_main', name: 'Общий Стрим', type: 'group', participants: [] }
+        ];
+        let addChatType = 'user'; 
 
+        let incomingFileBuffer = {};
+        let incomingFileInfo = {};
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
-
-        // E2EE Переменные (CryptoKey объект)
         let derivedE2eeKey = null;
-        const CRYPTO_SALT = CryptoJS.enc.Hex.parse("4d61785369646f726f765032504368617453616c74"); // Статическая соль
+        const CRYPTO_SALT = CryptoJS.enc.Hex.parse("4d61785369646f726f765032504368617453616c74");
+
+        let localStream = null;
+        let currentCall = null;
+        let activeCalls = {}; 
+        let callState = 'idle'; 
+        let currentCallType = 'audio'; 
+        let remoteStreams = {}; 
+        let statusTimers = {};
+        let userStatuses = {}; 
 
         let currentIceServers = [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun.cloudflare.com:3478' }
         ];
 
-        // Настройка парсера Markdown
         marked.setOptions({ gfm: true, breaks: true, pure: true });
 
         window.addEventListener('DOMContentLoaded', () => {
-            const saved = localStorage.getItem('p2p_chat_history');
-            if (saved) {
-                try {
-                    chatHistory = JSON.parse(saved);
-                    renderAllMessages(chatHistory);
-                } catch (e) { console.error(e); }
-            } else {
-                renderTextMessage("Чат готов. Задайте общий **Секретный Ключ E2EE** с пиром для приватного общения.", 'in', 'welcome_msg');
+            const savedRooms = localStorage.getItem('p2p_rooms');
+            if (savedRooms) {
+                try { rooms = JSON.parse(savedRooms); } catch(e){}
+            }
+
+            const savedHistory = localStorage.getItem('p2p_chat_history_v2');
+            if (savedHistory) {
+                try { chatHistory = JSON.parse(savedHistory); } catch (e) { console.error(e); }
             }
 
             myUserId = localStorage.getItem('p2p_my_id');
@@ -935,9 +1310,7 @@
                 localStorage.setItem('p2p_my_id', myUserId);
             }
             document.getElementById('myIdField').value = myUserId;
-            document.getElementById('chatTitle').innerText = `Вы: ${myUserId}`;
 
-            // Восстановление пароля E2EE из сессии если был
             const savedPass = sessionStorage.getItem('p2p_e2ee_pass');
             if (savedPass) {
                 document.getElementById('e2eeKeyField').value = savedPass;
@@ -945,61 +1318,31 @@
             }
 
             initPeerJS();
+            renderRoomsDOM();
+            switchActiveChat(activeChatId);
         });
 
-        // 1. КРИПТОГРАФИЯ: Деривация ключа PBKDF2 -> AES-GCM 256
         async function deriveCryptoKeyFromInput() {
             const password = document.getElementById('e2eeKeyField').value;
-            if (!password) {
-                derivedE2eeKey = null;
-                sessionStorage.removeItem('p2p_e2ee_pass');
-                return;
-            }
+            if (!password) { derivedE2eeKey = null; sessionStorage.removeItem('p2p_e2ee_pass'); return; }
             sessionStorage.setItem('p2p_e2ee_pass', password);
-
-            const baseKey = await crypto.subtle.importKey(
-                "raw",
-                new TextEncoder().encode(password),
-                "PBKDF2",
-                false,
-                ["deriveKey"]
-            );
-
-            // Соль переводим в Uint8Array
+            const baseKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
             const saltBytes = new Uint8Array(CRYPTO_SALT.words.length * 4);
             for (let i = 0; i < CRYPTO_SALT.words.length; i++) {
                 const word = CRYPTO_SALT.words[i];
-                saltBytes[i * 4] = (word >> 24) & 0xFF;
-                saltBytes[i * 4 + 1] = (word >> 16) & 0xFF;
-                saltBytes[i * 4 + 2] = (word >> 8) & 0xFF;
-                saltBytes[i * 4 + 3] = word & 0xFF;
+                saltBytes[i * 4] = (word >> 24) & 0xFF; saltBytes[i * 4 + 1] = (word >> 16) & 0xFF;
+                saltBytes[i * 4 + 2] = (word >> 8) & 0xFF; saltBytes[i * 4 + 3] = word & 0xFF;
             }
-
             derivedE2eeKey = await crypto.subtle.deriveKey(
-                {
-                    name: "PBKDF2",
-                    salt: saltBytes,
-                    iterations: 100000,
-                    hash: "SHA-256"
-                },
-                baseKey,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["encrypt", "decrypt"]
+                { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
+                baseKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
             );
         }
 
         async function encryptData(stringData) {
             if (!derivedE2eeKey) return { encrypted: false, payload: stringData };
             const iv = crypto.getRandomValues(new Uint8Array(12));
-            const encoded = new TextEncoder().encode(stringData);
-            
-            const ciphertext = await crypto.subtle.encrypt(
-                { name: "AES-GCM", iv: iv },
-                derivedE2eeKey,
-                encoded
-            );
-
+            const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, derivedE2eeKey, new TextEncoder().encode(stringData));
             return {
                 encrypted: true,
                 iv: Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join(''),
@@ -1009,257 +1352,653 @@
 
         async function decryptData(packet) {
             if (!packet.encrypted) return packet.payload;
-            if (!derivedE2eeKey) return "🚨 [Сообщение зашифровано. Введите верный E2EE ключ в панели]";
-
+            if (!derivedE2eeKey) return "🚨 [Сообщение зашифровано. Введите E2EE ключ]";
             try {
                 const iv = new Uint8Array(packet.iv.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
                 const encryptedBytes = new Uint8Array(atob(packet.ciphertext).split("").map(c => c.charCodeAt(0)));
-                
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: "AES-GCM", iv: iv },
-                    derivedE2eeKey,
-                    encryptedBytes
-                );
+                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, derivedE2eeKey, encryptedBytes);
                 return new TextDecoder().decode(decrypted);
-            } catch (e) {
-                return "🚨 [Ошибка декодирования E2EE. Неверный ключ шлюза]";
-            }
+            } catch (e) { return "🚨 [Неверный ключ шифрования]"; }
         }
 
         function initPeerJS() {
-            setStatus('Подключение к сети...');
-            
-            peer = new Peer(myUserId, {
-                config: { iceServers: currentIceServers, sdpSemantics: 'unified-plan' },
-                secure: true, debug: 0
-            });
+            setStatus('Подключение...');
+            peer = new Peer(myUserId, { config: { iceServers: currentIceServers }, secure: true, debug: 0 });
 
             peer.on('open', (id) => {
                 myUserId = id;
                 localStorage.setItem('p2p_my_id', myUserId);
-                document.getElementById('chatTitle').innerText = `Вы: ${myUserId}`;
-                setStatus('Сервер онлайн', 'connected');
+                updateStatusBadge();
+                autoConnectToKnownPeers();
             });
-
-            peer.on('connection', (conn) => {
-                if (dataChannel && dataChannel.open) { conn.close(); return; }
-                targetUserId = conn.peer;
-                setupDataChannel(conn);
-            });
-
-            // 6. Мультимедиа: Входящий аудиозвонок
-            peer.on('call', async (call) => {
-                if (confirm(`Входящий P2P вызов от ${call.peer}. Ответить?`)) {
-                    try {
-                        localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        currentCall = call;
-                        call.answer(localAudioStream);
-                        showCallUI(true, "Разговор...");
-                        
-                        call.on('stream', (remoteStream) => {
-                            document.getElementById('remoteAudio').srcObject = remoteStream;
-                        });
-                        call.on('close', hangUpCall);
-                    } catch(e) {
-                        alert("Не удалось активировать аудио-устройства.");
-                    }
-                } else {
-                    call.close();
+            peer.on('connection', (conn) => { setupDataChannel(conn); });
+            
+            peer.on('call', (call) => {
+                if (callState === 'active' && rooms.find(r => r.id === activeChatId)?.type === 'group') {
+                    call.answer(localStream);
+                    setupMediaCallHandlers(call);
+                    activeCalls[call.peer] = call;
+                    return;
                 }
+                
+                if (callState !== 'idle') {
+                    call.close();
+                    return;
+                }
+                
+                currentCall = call;
+                showCallOverlay('ringing', call.peer);
             });
 
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
                     myUserId = 'peer_' + Math.random().toString(36).substr(2, 6);
                     document.getElementById('myIdField').value = myUserId;
-                    localStorage.setItem('p2p_my_id', myUserId);
                     initPeerJS(); 
-                } else if (err.type === 'peer-unavailable') {
-                    alert(`Собеседник не найден.`);
-                    setStatus('Сервер онлайн', 'connected');
                 }
             });
+            peer.on('disconnected', () => peer.reconnect());
+        }
 
-            peer.on('disconnected', () => {
-                peer.reconnect();
+        function autoConnectToKnownPeers() {
+            rooms.forEach(r => {
+                if (r.type === 'user' && r.id !== 'global_main') {
+                    connectToPeerById(r.id);
+                }
+                if (r.participants) {
+                    r.participants.forEach(p => connectToPeerById(p));
+                }
             });
+        }
+
+        function connectToPeerById(targetId) {
+            if (!targetId || targetId === myUserId || connections[targetId]) return;
+            if (peer && !peer.disconnected) {
+                const conn = peer.connect(targetId, { reliable: true });
+                setupDataChannel(conn);
+            }
+        }
+
+        function setupDataChannel(conn) {
+            conn.on('open', () => {
+                connections[conn.peer] = conn;
+                if (!rooms.some(r => r.id === conn.peer)) {
+                    rooms.push({ id: conn.peer, name: conn.peer, type: 'user', participants: [] });
+                    localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+                    renderRoomsDOM();
+                }
+                updateStatusBadge();
+                updateParticipantListDOM();
+            });
+
+            conn.on('close', () => { delete connections[conn.peer]; updateStatusBadge(); updateParticipantListDOM(); });
+            conn.on('error', () => { delete connections[conn.peer]; updateStatusBadge(); updateParticipantListDOM(); });
+
+            conn.on('data', async (rawData) => {
+                const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+                
+                if (data.type === 'status_update') {
+                    handleIncomingStatus(conn.peer, data.roomId, data.status);
+                    return;
+                }
+                if (data.type === 'call_system') {
+                    handleCallSystemMessage(conn.peer, data);
+                    return;
+                }
+
+                if (data.encryptedPayload) {
+                    const decryptedString = await decryptData(data.encryptedPayload);
+                    let decryptedPacket = JSON.parse(decryptedString);
+                    const senderId = conn.peer;
+                    
+                    let targetRoom = decryptedPacket.roomId || senderId;
+                    
+                    if (targetRoom === myUserId) {
+                        targetRoom = senderId;
+                    }
+
+                    if (!rooms.some(r => r.id === targetRoom)) {
+                        targetRoom = 'global_main';
+                    }
+
+                    if (targetRoom !== 'global_main') {
+                        const currentRoomObj = rooms.find(r => r.id === targetRoom);
+                        if (currentRoomObj && currentRoomObj.type === 'user') {
+                            if (targetRoom !== senderId) return; 
+                        }
+                    }
+
+                    if (decryptedPacket.type === 'text') {
+                        saveToStorage({ id: decryptedPacket.id, roomId: targetRoom, msgType: 'text', payload: decryptedPacket.payload, side: 'in', replyTo: decryptedPacket.replyTo, sender: senderId });
+                    } else if (decryptedPacket.type === 'file-end') {
+                        const fId = decryptedPacket.fileMsgId;
+                        const fullPayload = incomingFileBuffer[fId].join('');
+                        const info = incomingFileInfo[fId];
+                        
+                        if (info.filetype.startsWith('audio/')) {
+                            saveToStorage({ id: fId, roomId: targetRoom, msgType: 'voice', payload: fullPayload, side: 'in', replyTo: info.replyTo, sender: senderId });
+                        } else {
+                            saveToStorage({ id: fId, roomId: targetRoom, msgType: 'file', filename: info.filename, filetype: info.filetype, payload: fullPayload, side: 'in', replyTo: info.replyTo, sender: senderId });
+                        }
+                        delete incomingFileBuffer[fId]; delete incomingFileInfo[fId];
+                        document.getElementById('p2pProgress').style.display = 'none';
+                    } else if (decryptedPacket.type === 'file-start') {
+                        incomingFileBuffer[decryptedPacket.fileMsgId] = [];
+                        incomingFileInfo[decryptedPacket.fileMsgId] = { filename: decryptedPacket.filename, filetype: decryptedPacket.filetype, replyTo: decryptedPacket.replyTo };
+                        document.getElementById('p2pProgress').style.display = 'block';
+                    } else if (decryptedPacket.type === 'file-chunk') {
+                        if (incomingFileBuffer[decryptedPacket.fileMsgId]) incomingFileBuffer[decryptedPacket.fileMsgId].push(decryptedPacket.chunk);
+                    } else if (decryptedPacket.type === 'reaction') {
+                        updateReactionInStorage(decryptedPacket.msgId, decryptedPacket.emoji);
+                    }
+
+                    if (activeChatId === targetRoom) {
+                        renderAllMessages(getFilteredHistory(activeChatId));
+                    }
+                    renderRoomsDOM();
+                }
+            });
+        }
+
+        function sendTypingStatus(forcedStatus = null) {
+            let currentStatus = forcedStatus || 'typing';
+            if (isRecording) currentStatus = 'recording_voice';
+            if (callState === 'active') currentStatus = 'in_call';
+
+            const room = rooms.find(r => r.id === activeChatId);
+            let packet = { type: 'status_update', roomId: activeChatId, status: currentStatus };
+            
+            let targets = [];
+            if (room && room.type === 'group') {
+                targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
+            } else {
+                targets = [activeChatId];
+            }
+
+            targets.forEach(tId => {
+                if (connections[tId] && connections[tId].open) {
+                    connections[tId].send(packet);
+                }
+            });
+        }
+
+        function handleIncomingStatus(senderId, roomId, status) {
+            if (!userStatuses[roomId]) userStatuses[roomId] = {};
+            userStatuses[roomId][senderId] = { status: status, timestamp: Date.now() };
+
+            if (statusTimers[senderId]) clearTimeout(statusTimers[senderId]);
+            statusTimers[senderId] = setTimeout(() => {
+                if (userStatuses[roomId] && userStatuses[roomId][senderId]) {
+                    delete userStatuses[roomId][senderId];
+                    updateHeaderStatusTextDOM();
+                }
+            }, 4000);
+
+            if (roomId === activeChatId) {
+                updateHeaderStatusTextDOM();
+            }
+        }
+
+        function updateHeaderStatusTextDOM() {
+            const statusIndicator = document.getElementById('headerStatusText');
+            const roomData = rooms.find(r => r.id === activeChatId);
+            if (!roomData) return;
+
+            const currentRoomStatuses = userStatuses[activeChatId] || {};
+            const activeStrings = [];
+
+            for (const [pId, info] of Object.entries(currentRoomStatuses)) {
+                let textRepresentation = 'активен';
+                if (info.status === 'typing') textRepresentation = 'печатает...';
+                if (info.status === 'recording_voice') textRepresentation = 'записывает голосовое...';
+                if (info.status === 'in_call') textRepresentation = 'в звонке';
+                
+                if (roomData.type === 'group') {
+                    activeStrings.push(`${pId} ${textRepresentation}`);
+                } else {
+                    activeStrings.push(textRepresentation);
+                }
+            }
+
+            if (activeStrings.length > 0) {
+                statusIndicator.innerText = activeStrings.join(', ');
+            } else {
+                statusIndicator.innerText = roomData.type === 'group' ? 'групповой чат' : 'личная переписка';
+            }
+        }
+
+        function showCallOverlay(state, targetId) {
+            callState = state;
+            const overlay = document.getElementById('callOverlay');
+            const callNameDOM = document.getElementById('callNameDOM');
+            const callStatusDOM = document.getElementById('callStatusDOM');
+            const avatarDOM = document.getElementById('callAvatarDOM');
+            const acceptContainer = document.getElementById('acceptCallContainer');
+
+            overlay.style.display = 'flex';
+            avatarDOM.innerHTML = targetId.charAt(0).toUpperCase();
+            callNameDOM.innerText = targetId;
+
+            if (state === 'calling') {
+                callStatusDOM.innerText = 'ожидание...';
+                acceptContainer.style.display = 'none';
+            } else if (state === 'ringing') {
+                callStatusDOM.innerText = 'входящий звонок...';
+                acceptContainer.style.display = 'flex';
+            } else if (state === 'active') {
+                callStatusDOM.innerText = 'разговор...';
+                acceptContainer.style.display = 'none';
+                sendTypingStatus('in_call');
+            }
+        }
+
+        async function initiateCall(type) {
+            if (callState !== 'idle') return;
+            const room = rooms.find(r => r.id === activeChatId);
+            if (!room) return;
+            currentCallType = type;
+
+            try {
+                const constraints = { audio: true, video: type === 'video' };
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                displayLocalStream();
+
+                if (room.type === 'user') {
+                    showCallOverlay('calling', room.id);
+                    const call = peer.call(room.id, localStream);
+                    currentCall = call;
+                    setupMediaCallHandlers(call);
+                } else {
+                    showCallOverlay('active', room.name);
+                    let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
+                    targets.forEach(tId => {
+                        if (connections[tId] && connections[tId].open) {
+                            connections[tId].send({ type: 'call_system', action: 'group_call_started', roomId: room.id });
+                            const call = peer.call(tId, localStream);
+                            activeCalls[tId] = call;
+                            setupMediaCallHandlers(call);
+                        }
+                    });
+                }
+            } catch (err) {
+                alert('Не удалось получить доступ к медиаустройствам: ' + err);
+                hangUpCall();
+            }
+        }
+
+        function handleCallSystemMessage(senderId, data) {
+            if (data.action === 'group_call_started') {
+                if (callState === 'idle' && activeChatId === data.roomId) {
+                    showCallOverlay('ringing', rooms.find(r => r.id === data.roomId)?.name || 'Группа');
+                }
+            }
+        }
+
+        async function acceptIncomingCall() {
+            if (!currentCall && rooms.find(r => r.id === activeChatId)?.type !== 'group') return;
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                displayLocalStream();
+
+                if (currentCall) {
+                    currentCall.answer(localStream);
+                    setupMediaCallHandlers(currentCall);
+                    showCallOverlay('active', currentCall.peer);
+                } else {
+                    const room = rooms.find(r => r.id === activeChatId);
+                    showCallOverlay('active', room.name);
+                    let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
+                    targets.forEach(tId => {
+                        if (connections[tId] && connections[tId].open) {
+                            const call = peer.call(tId, localStream);
+                            activeCalls[tId] = call;
+                            setupMediaCallHandlers(call);
+                        }
+                    });
+                }
+            } catch (err) {
+                alert('Ошибка доступа к медиаустройствам: ' + err);
+                hangUpCall();
+            }
+        }
+
+        function setupMediaCallHandlers(call) {
+            call.on('stream', (remoteStream) => {
+                remoteStreams[call.peer] = remoteStream;
+                displayRemoteStream(remoteStream, call.peer);
+            });
+            call.on('close', () => { handleMediaCallDisconnect(call.peer); });
+            call.on('error', () => { handleMediaCallDisconnect(call.peer); });
+        }
+
+        function handleMediaCallDisconnect(peerId) {
+            delete remoteStreams[peerId];
+            delete activeCalls[peerId];
+            
+            const room = rooms.find(r => r.id === activeChatId);
+            if (!(room && room.type === 'group' && callState === 'active')) {
+                if (currentCall && currentCall.peer === peerId) {
+                    hangUpCall();
+                }
+            }
+        }
+
+        function displayLocalStream() {
+            const avatarDOM = document.getElementById('callAvatarDOM');
+            avatarDOM.innerHTML = '';
+            
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0 && videoTracks[0].enabled) {
+                const video = document.createElement('video');
+                video.srcObject = localStream;
+                video.autoplay = true;
+                video.muted = true;
+                video.playsInline = true;
+                avatarDOM.appendChild(video);
+            } else {
+                avatarDOM.innerHTML = myUserId.charAt(0).toUpperCase();
+            }
+        }
+
+        function displayRemoteStream(stream, peerId) {
+            const room = rooms.find(r => r.id === activeChatId);
+            if (room && room.type === 'user') {
+                const avatarDOM = document.getElementById('callAvatarDOM');
+                avatarDOM.innerHTML = '';
+                const videoTracks = stream.getVideoTracks();
+                if (videoTracks.length > 0) {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    avatarDOM.appendChild(video);
+                } else {
+                    avatarDOM.innerHTML = peerId.charAt(0).toUpperCase();
+                }
+            }
+        }
+
+        function toggleCallVideo() {
+            if (localStream) {
+                let videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    document.getElementById('callVideoBtn').style.opacity = videoTrack.enabled ? '1' : '0.6';
+                    displayLocalStream();
+                } else {
+                    navigator.mediaDevices.getUserMedia({ video: true }).then(vStream => {
+                        const newTrack = vStream.getVideoTracks()[0];
+                        localStream.addTrack(newTrack);
+                        document.getElementById('callVideoBtn').style.opacity = '1';
+                        displayLocalStream();
+                        Object.values(activeCalls).forEach(c => {
+                            if(c.peerConnection) {
+                                const sender = c.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                                if (sender) sender.replaceTrack(newTrack);
+                            }
+                        });
+                        if (currentCall && currentCall.peerConnection) {
+                            const sender = currentCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) sender.replaceTrack(newTrack);
+                        }
+                    }).catch(() => alert('Камера недоступна.'));
+                }
+            }
+        }
+
+        function hangUpCall() {
+            if (currentCall) currentCall.close();
+            Object.values(activeCalls).forEach(c => c.close());
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            localStream = null;
+            currentCall = null;
+            activeCalls = {};
+            remoteStreams = {};
+            callState = 'idle';
+            document.getElementById('callOverlay').style.display = 'none';
+            document.getElementById('callVideoBtn').style.opacity = '1';
+            sendTypingStatus('active');
+        }
+
+        function renderRoomsDOM() {
+            const container = document.getElementById('chatsListDOM');
+            container.innerHTML = '';
+
+            rooms.forEach(room => {
+                const isSelected = room.id === activeChatId;
+                const history = getFilteredHistory(room.id);
+                const lastMsg = history[history.length - 1];
+                
+                let previewText = 'Нет сообщений';
+                let metaTime = '';
+                if(lastMsg) {
+                    if(lastMsg.msgType === 'text') previewText = lastMsg.payload;
+                    else if(lastMsg.msgType === 'voice') previewText = '🎵 Голосовое сообщение';
+                    else previewText = `📁 ${lastMsg.filename || 'Файл'}`;
+                    metaTime = new Date(parseInt(lastMsg.id.split('_')[1]) || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+
+                const firstLetter = room.name.charAt(0);
+
+                const item = document.createElement('div');
+                item.className = `tg-chat-item ${isSelected ? 'active' : ''}`;
+                item.onclick = () => switchActiveChat(room.id);
+                item.innerHTML = `
+                    <div class="tg-avatar">${firstLetter}</div>
+                    <div class="tg-chat-info">
+                        <div class="tg-chat-top">
+                            <div class="tg-chat-name">${room.name}</div>
+                            <div class="tg-chat-meta">${metaTime}</div>
+                        </div>
+                        <div class="tg-chat-bottom">
+                            <div class="tg-chat-preview">${previewText}</div>
+                            ${room.id !== 'global_main' ? `<button class="chat-delete-btn" onclick="deleteChatRoom(event, '${room.id}')">✕</button>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function deleteChatRoom(event, id) {
+            event.stopPropagation();
+            if (confirm(`Вы действительно хотите удалить чат и всю его историю?`)) {
+                rooms = rooms.filter(r => r.id !== id);
+                chatHistory = chatHistory.filter(m => m.roomId !== id);
+                localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
+                if (activeChatId === id) {
+                    switchActiveChat('global_main');
+                } else {
+                    renderRoomsDOM();
+                }
+            }
+        }
+
+        function switchActiveChat(id) {
+            activeChatId = id;
+            const currentRoom = rooms.find(r => r.id === id);
+            if (!currentRoom) return;
+
+            document.getElementById('chatTitle').innerText = `${currentRoom.name} (Вы: ${myUserId})`;
+            
+            const audioBtnDOM = document.getElementById('audioCallButton');
+            const videoBtnDOM = document.getElementById('videoCallButton');
+            if (currentRoom.id === 'global_main') {
+                audioBtnDOM.style.display = 'none';
+                videoBtnDOM.style.display = 'none';
+            } else {
+                audioBtnDOM.style.display = 'flex';
+                videoBtnDOM.style.display = 'flex';
+            }
+
+            renderRoomsDOM();
+            renderAllMessages(getFilteredHistory(id));
+            updateParticipantListDOM();
+            updateHeaderStatusTextDOM();
+            cancelReply();
+        }
+
+        function toggleAddChatModal() {
+            const modal = document.getElementById('addChatModal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function setAddChatType(type) {
+            addChatType = type;
+            document.getElementById('typeUserBtn').classList.toggle('active', type === 'user');
+            document.getElementById('typeGroupBtn').classList.toggle('active', type === 'group');
+            document.getElementById('chatTargetInput').placeholder = type === 'user' ? "Введите ID собеседника" : "Введите название группы";
+        }
+
+        function confirmAddChat() {
+            const val = document.getElementById('chatTargetInput').value.trim();
+            if(!val) return;
+
+            if (addChatType === 'user') {
+                if(!rooms.some(r => r.id === val)) {
+                    rooms.push({ id: val, name: val, type: 'user', participants: [] });
+                    connectToPeerById(val);
+                }
+                switchActiveChat(val);
+            } else {
+                const gId = 'group_' + Date.now();
+                rooms.push({ id: gId, name: val, type: 'group', participants: [] });
+                switchActiveChat(gId);
+            }
+
+            localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+            document.getElementById('chatTargetInput').value = '';
+            toggleAddChatModal();
+        }
+
+        function updateParticipantListDOM() {
+            const listContainer = document.getElementById('participantList');
+            listContainer.innerHTML = '';
+            const room = rooms.find(r => r.id === activeChatId);
+            
+            if (!room || room.type === 'user') {
+                document.getElementById('participantList').innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted)">Доступно только в группах</div>';
+                return;
+            }
+
+            const addForm = document.createElement('div');
+            addForm.className = 'id-input-wrapper';
+            addForm.style.marginBottom = '6px';
+            addForm.innerHTML = `
+                <input type="text" id="groupAddPeerId" placeholder="ID человека" style="padding:4px 12px; font-size:0.75rem;">
+                <button onclick="addPeerToCurrentGroup()" style="padding:4px 12px; font-size:0.75rem;" class="action-btn">Добавить</button>
+            `;
+            listContainer.appendChild(addForm);
+
+            room.participants.forEach(pId => {
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+                item.innerHTML = `
+                    <span>${pId}</span>
+                    <button class="disconnect-btn" onclick="removePeerFromCurrentGroup('${pId}')">✕</button>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function addPeerToCurrentGroup() {
+            const input = document.getElementById('groupAddPeerId');
+            const pId = input.value.trim();
+            const room = rooms.find(r => r.id === activeChatId);
+            if(pId && room && !room.participants.includes(pId)) {
+                room.participants.push(pId);
+                localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+                connectToPeerById(pId);
+                updateParticipantListDOM();
+            }
+            input.value = '';
+        }
+
+        function removePeerFromCurrentGroup(pId) {
+            const room = rooms.find(r => r.id === activeChatId);
+            if(room) {
+                room.participants = room.participants.filter(p => p !== pId);
+                localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+                updateParticipantListDOM();
+            }
+        }
+
+        function getFilteredHistory(roomId) {
+            return chatHistory.filter(m => m.roomId === roomId);
         }
 
         function updateMyId() {
             const newId = document.getElementById('myIdField').value.trim();
             if (newId && newId !== myUserId) {
-                myUserId = newId;
-                localStorage.setItem('p2p_my_id', myUserId);
+                myUserId = newId; localStorage.setItem('p2p_my_id', myUserId);
                 if (peer) peer.destroy();
                 setTimeout(initPeerJS, 500);
             }
         }
 
-        function searchAndConnect() {
-            const searchId = document.getElementById('searchIdField').value.trim();
-            if (!searchId || searchId === myUserId) return;
-            
-            if (peer && !peer.disconnected) {
-                setStatus(`Соединение с ${searchId}...`);
-                const conn = peer.connect(searchId, { reliable: true });
-                targetUserId = searchId;
-                setupDataChannel(conn);
-            }
-        }
-
         function setStatus(text, state = 'default') {
             const statusEl = document.getElementById('status');
-            statusEl.innerText = text;
-            statusEl.className = 'status-badge'; 
+            statusEl.innerText = text; statusEl.className = 'status-badge'; 
             if (state === 'connected') statusEl.classList.add('connected');
-            if (state === 'typing') statusEl.classList.add('typing');
+        }
+
+        function updateStatusBadge() {
+            const count = Object.keys(connections).length;
+            setStatus(count > 0 ? `Сеть: ${count + 1}` : 'В сети (один)', count > 0 ? 'connected' : 'default');
         }
 
         function togglePanel() {
             const panel = document.getElementById('p2pPanel');
-            if (window.innerWidth <= 680) panel.classList.toggle('open');
+            if (window.innerWidth <= 768) panel.classList.toggle('open');
             else panel.classList.toggle('collapsed');
         }
 
-        function toggleInterfaceStates(enabled) {
-            document.getElementById('msgInput').disabled = !enabled;
-            document.getElementById('callBtn').style.display = enabled ? 'block' : 'none';
-            const sendBtn = document.getElementById('btnSend');
-            sendBtn.disabled = !enabled;
-            if(enabled) sendBtn.classList.add('active'); else sendBtn.classList.remove('active');
-        }
-
-        // 3. Фича: Автономный Heartbeat (Пинг-Понг статуса соединения)
-        function startHeartbeat() {
-            stopHeartbeat();
-            let missedPings = 0;
-            heartbeatInterval = setInterval(() => {
-                if (dataChannel && dataChannel.open) {
-                    dataChannel.send({ type: 'ping' });
-                    missedPings++;
-                    if (missedPings > 2) {
-                        setStatus("Соединение нестабильно", "default");
-                    }
-                }
-            }, 5000);
-
-            return () => { missedPings = 0; };
-        }
-
-        function stopHeartbeat() {
-            if(heartbeatInterval) clearInterval(heartbeatInterval);
-        }
-
-        function setupDataChannel(conn) {
-            dataChannel = conn;
-            const resetMissed = startHeartbeat();
-
-            dataChannel.on('open', () => {
-                isConnectedState = true;
-                setStatus(`В сети с ${targetUserId}`, 'connected');
-                toggleInterfaceStates(true);
-                document.getElementById('p2pPanel').classList.remove('open');
-            });
-
-            dataChannel.on('close', () => {
-                isConnectedState = false;
-                setStatus('Собеседник отключился', 'default');
-                toggleInterfaceStates(false);
-                stopHeartbeat();
-                dataChannel = null;
-            });
-
-            dataChannel.on('data', async (rawData) => {
-                const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-                
-                // Обработка Heartbeat без расшифровки
-                if (data.type === 'ping') {
-                    if(dataChannel && dataChannel.open) dataChannel.send({ type: 'pong' });
-                    return;
-                }
-                if (data.type === 'pong') {
-                    resetMissed();
-                    if(document.getElementById('status').innerText === "Соединение нестабильно") {
-                        setStatus(`В сети с ${targetUserId}`, 'connected');
-                    }
-                    return;
-                }
-
-                if (data.type === 'typing') {
-                    setStatus(data.isTyping ? 'Печатает...' : `В сети с ${targetUserId}`, data.isTyping ? 'typing' : 'connected');
-                    return;
-                }
-
-                // Расшифровка защищенных пакетов данных
-                if (data.encryptedPayload) {
-                    const decryptedString = await decryptData(data.encryptedPayload);
-                    let decryptedPacket = JSON.parse(decryptedString);
-
-                    if (decryptedPacket.type === 'text') {
-                        renderTextMessage(decryptedPacket.payload, 'in', decryptedPacket.id, decryptedPacket.replyTo);
-                        saveToStorage({ id: decryptedPacket.id, msgType: 'text', payload: decryptedPacket.payload, side: 'in', replyTo: decryptedPacket.replyTo, reactions: [] });
-                    } else if (decryptedPacket.type === 'reaction') {
-                        updateReactionOnDOM(decryptedPacket.msgId, decryptedPacket.emoji);
-                        updateReactionInStorage(decryptedPacket.msgId, decryptedPacket.emoji);
-                    } else if (decryptedPacket.type === 'file-start') {
-                        incomingFileBuffer = [];
-                        incomingFileName = decryptedPacket.filename;
-                        incomingFileType = decryptedPacket.filetype;
-                        incomingFileReply = decryptedPacket.replyTo;
-                        document.getElementById('p2pProgress').style.display = 'block';
-                    } else if (decryptedPacket.type === 'file-chunk') {
-                        incomingFileBuffer.push(decryptedPacket.chunk);
-                    } else if (decryptedPacket.type === 'file-end') {
-                        document.getElementById('p2pProgress').style.display = 'none';
-                        const fullPayload = incomingFileBuffer.join('');
-                        
-                        if (incomingFileType.startsWith('audio/')) {
-                            renderVoiceMessage(fullPayload, 'in', decryptedPacket.id, incomingFileReply);
-                            saveToStorage({ id: decryptedPacket.id, msgType: 'voice', payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
-                        } else {
-                            renderFileMessage(incomingFileName, incomingFileType, fullPayload, 'in', decryptedPacket.id, incomingFileReply);
-                            saveToStorage({ id: decryptedPacket.id, msgType: 'file', filename: incomingFileName, filetype: incomingFileType, payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
-                        }
-                        incomingFileBuffer = [];
-                    }
-                    if(activeTab === 'media') buildSharedMediaTab();
-                }
-            });
-        }
-
-        function sendTypingSignal() {
-            if (!dataChannel || !dataChannel.open) return;
-            dataChannel.send({ type: 'typing', isTyping: true });
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                if (dataChannel && dataChannel.open) dataChannel.send({ type: 'typing', isTyping: false });
-            }, 1500);
-        }
-
-        // Отправка обернутого в E2EE пакета
-        async function sendEncryptedPacket(packet) {
+        async function broadcastPacket(packet) {
+            packet.roomId = activeChatId; 
             const stringified = JSON.stringify(packet);
             const cryptoContainer = await encryptData(stringified);
-            if (dataChannel && dataChannel.open) {
-                dataChannel.send({ encryptedPayload: cryptoContainer });
+            
+            const currentRoom = rooms.find(r => r.id === activeChatId);
+            let targets = [];
+
+            if (currentRoom && currentRoom.type === 'group') {
+                if(currentRoom.id === 'global_main') {
+                    targets = Object.keys(connections);
+                } else {
+                    targets = currentRoom.participants;
+                }
+            } else {
+                targets = [activeChatId];
             }
+
+            targets.forEach(tId => {
+                if (connections[tId] && connections[tId].open) {
+                    connections[tId].send({ encryptedPayload: cryptoContainer });
+                }
+            });
         }
 
         async function sendMessage() {
             const input = document.getElementById('msgInput');
             const text = input.value.trim();
-            if (!text || !dataChannel || !dataChannel.open) return;
+            if (!text) return;
             
             const mId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
             const packet = { type: 'text', payload: text, id: mId, replyTo: currentReplyTarget };
             
-            await sendEncryptedPacket(packet);
+            await broadcastPacket(packet);
             
-            renderTextMessage(text, 'out', mId, currentReplyTarget);
-            saveToStorage({ id: mId, msgType: 'text', payload: text, side: 'out', replyTo: currentReplyTarget, reactions: [] });
+            const savedObj = { id: mId, roomId: activeChatId, msgType: 'text', payload: text, side: 'out', replyTo: currentReplyTarget, reactions: [], sender: myUserId };
+            saveToStorage(savedObj);
             
-            input.value = '';
-            cancelReply();
+            renderTextMessage(text, 'out', mId, currentReplyTarget, [], myUserId);
+            renderRoomsDOM();
+            input.value = ''; cancelReply();
         }
 
         async function sendMediaDataInChunks(base64Data, filename, mimeType) {
@@ -1267,445 +2006,219 @@
             const progressIndicator = document.getElementById('p2pProgress');
             progressIndicator.style.display = 'block';
 
-            await sendEncryptedPacket({
-                type: 'file-start', filename: filename, filetype: mimeType, replyTo: currentReplyTarget
-            });
+            sendTypingStatus('recording_voice');
+            await broadcastPacket({ type: 'file-start', filename: filename, filetype: mimeType, replyTo: currentReplyTarget, fileMsgId: mId });
 
-            const CHUNK_SIZE = 12000; // Меньший размер чанка снижает накладные расходы криптографии
-            let offset = 0;
-            
-            async function sendNextChunk() {
-                while (offset < base64Data.length) {
-                    const chunk = base64Data.slice(offset, offset + CHUNK_SIZE);
-                    offset += CHUNK_SIZE;
-                    const pct = Math.min(100, Math.floor((offset / base64Data.length) * 100));
-                    progressIndicator.innerText = `Отправка: ${pct}%`;
-                    
-                    await sendEncryptedPacket({ type: 'file-chunk', chunk: chunk });
-                }
-
-                if (offset >= base64Data.length) {
-                    progressIndicator.style.display = 'none';
-                    await sendEncryptedPacket({ type: 'file-end', id: mId });
-                    
-                    if (mimeType.startsWith('audio/')) {
-                        renderVoiceMessage(base64Data, 'out', mId, currentReplyTarget);
-                        saveToStorage({ id: mId, msgType: 'voice', payload: base64Data, side: 'out', replyTo: currentReplyTarget, reactions: [] });
-                    } else {
-                        renderFileMessage(filename, mimeType, base64Data, 'out', mId, currentReplyTarget);
-                        saveToStorage({ id: mId, msgType: 'file', filename: filename, filetype: mimeType, payload: base64Data, side: 'out', replyTo: currentReplyTarget, reactions: [] });
-                    }
-                    if(activeTab === 'media') buildSharedMediaTab();
-                    cancelReply();
-                }
+            const CHUNK_SIZE = 12000; let offset = 0;
+            while (offset < base64Data.length) {
+                const chunk = base64Data.slice(offset, offset + CHUNK_SIZE); offset += CHUNK_SIZE;
+                const pct = Math.min(100, Math.floor((offset / base64Data.length) * 100));
+                progressIndicator.innerText = `Отправка: ${pct}%`;
+                await broadcastPacket({ type: 'file-chunk', chunk: chunk, fileMsgId: mId });
             }
-            sendNextChunk();
+
+            progressIndicator.style.display = 'none';
+            await broadcastPacket({ type: 'file-end', fileMsgId: mId });
+            
+            let savedObj = { id: mId, roomId: activeChatId, payload: base64Data, side: 'out', replyTo: currentReplyTarget, reactions: [], sender: myUserId };
+            if (mimeType.startsWith('audio/')) {
+                savedObj.msgType = 'voice'; renderVoiceMessage(base64Data, 'out', mId, currentReplyTarget, [], myUserId);
+            } else {
+                savedObj.msgType = 'file'; savedObj.filename = filename; savedObj.filetype = mimeType;
+                renderFileMessage(filename, mimeType, base64Data, 'out', mId, currentReplyTarget, [], myUserId);
+            }
+            saveToStorage(savedObj);
+            renderRoomsDOM(); cancelReply();
         }
 
         function processFileSelection(input) {
-            const file = input.files[0];
-            if (!file || !dataChannel || !dataChannel.open) return;
+            const file = input.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const bytes = new Uint8Array(e.target.result);
-                let binary = '';
+                const bytes = new Uint8Array(e.target.result); let binary = '';
                 for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-                const mime = file.type || "application/octet-stream";
-                sendMediaDataInChunks(`data:${mime};base64,` + btoa(binary), file.name, mime);
+                sendMediaDataInChunks(`data:${file.type || "application/octet-stream"};base64,` + btoa(binary), file.name, file.type);
             };
-            reader.readAsArrayBuffer(file);
-            input.value = '';
+            reader.readAsArrayBuffer(file); input.value = '';
         }
 
         async function toggleVoiceRecord() {
-            if (!dataChannel || !dataChannel.open) return;
             const micBtn = document.getElementById('micBtn');
-
             if (!isRecording) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    audioChunks = [];
-                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = []; mediaRecorder = new MediaRecorder(stream);
                     mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
                     mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
                         reader.onloadend = () => sendMediaDataInChunks(reader.result, 'voice.webm', 'audio/webm');
-                        reader.readAsDataURL(audioBlob);
+                        reader.readAsDataURL(new Blob(audioChunks, { type: 'audio/webm' }));
                     };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    micBtn.classList.add('recording');
+                    mediaRecorder.start(); isRecording = true; micBtn.classList.add('recording');
+                    sendTypingStatus('recording_voice');
                 } catch (err) { alert('Микрофон недоступен.'); }
-            } else {
-                if (mediaRecorder) mediaRecorder.stop();
-                isRecording = false;
-                micBtn.classList.remove('recording');
-            }
+            } else { if (mediaRecorder) mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording'); sendTypingStatus('typing'); }
         }
 
-        // 6. Фича: Инициация P2P звонка (WebRTC Audio Calls)
-        async function startAudioCall() {
-            if(!dataChannel || !dataChannel.open) return;
-            try {
-                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                showCallUI(true, "Вызов пира...");
-                
-                const call = peer.call(targetUserId, localAudioStream);
-                currentCall = call;
-                
-                call.on('stream', (remoteStream) => {
-                    document.getElementById('remoteAudio').srcObject = remoteStream;
-                    document.getElementById('callStatusText').innerText = "В разговоре";
-                });
-                call.on('close', hangUpCall);
-            } catch (e) {
-                alert("Ошибка захвата микрофона для звонка.");
-            }
-        }
-
-        function hangUpCall() {
-            showCallUI(false);
-            if (currentCall) { currentCall.close(); currentCall = null; }
-            if (localAudioStream) {
-                localAudioStream.getTracks().forEach(track => track.stop());
-                localAudioStream = null;
-            }
-        }
-
-        function showCallUI(show, statusText = "") {
-            const overlay = document.getElementById('callOverlay');
-            overlay.style.display = show ? 'flex' : 'none';
-            if(statusText) document.getElementById('callStatusText').innerText = statusText;
-        }
-
-        // 2. Фича: Рендеринг Markdown & Автоссылки
         function parseMarkdownAndLinks(text) {
-            // Экранируем теги для безопасности
             let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            // Регулярное выражение для автоссылок
-            const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-            safeText = safeText.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
-            // Парсинг Markdown через Marked
-            return marked.parseInline(safeText);
+            return marked.parseInline(safeText.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, '<a href="$1" target="_blank">$1</a>'));
         }
 
         function appendReactionsContainer(wrapper, reactions) {
             let container = wrapper.querySelector('.msg-reactions-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.className = 'msg-reactions-container';
-                wrapper.appendChild(container);
-            }
+            if (!container) { container = document.createElement('div'); container.className = 'msg-reactions-container'; wrapper.appendChild(container); }
             container.innerHTML = '';
             if (reactions && reactions.length > 0) {
-                const counts = {};
-                reactions.forEach(r => counts[r] = (counts[r] || 0) + 1);
+                const counts = {}; reactions.forEach(r => counts[r] = (counts[r] || 0) + 1);
                 for (const [emoji, count] of Object.entries(counts)) {
-                    const badge = document.createElement('div');
-                    badge.className = 'msg-reaction-badge';
-                    badge.innerText = count > 1 ? `${emoji} ${count}` : emoji;
-                    container.appendChild(badge);
+                    const badge = document.createElement('div'); badge.className = 'msg-reaction-badge';
+                    badge.innerText = count > 1 ? `${emoji} ${count}` : emoji; container.appendChild(badge);
                 }
-            } else { container.remove(); }
+            } else container.remove();
         }
 
-        function renderTextMessage(text, side, id, replyTo = null, reactions = []) {
+        function renderTextMessage(text, side, id, replyTo = null, reactions = [], senderId = '') {
             const container = document.getElementById('messages');
-            const wrapper = document.createElement('div');
-            wrapper.className = `msg-wrapper ${side}`;
-            wrapper.setAttribute('data-msg-id', id);
+            const wrapper = document.createElement('div'); wrapper.className = `msg-wrapper ${side}`; wrapper.setAttribute('data-msg-id', id);
             
-            const box = document.createElement('div');
-            box.className = 'msg-box';
-
-            if (replyTo) {
-                const quoteDiv = document.createElement('div');
-                quoteDiv.className = 'reply-quote';
-                quoteDiv.innerHTML = `
-                    <div class="reply-quote-sender">${replyTo.sender === 'out' ? 'Вы' : 'Пир'}</div>
-                    <div class="reply-quote-text">${replyTo.text}</div>
-                `;
-                box.appendChild(quoteDiv);
+            if(senderId && side === 'in') {
+                const senderDiv = document.createElement('div'); senderDiv.className = 'msg-sender-id'; senderDiv.innerText = senderId; wrapper.appendChild(senderDiv);
             }
-            
-            const textContent = document.createElement('span');
-            textContent.innerHTML = parseMarkdownAndLinks(text);
-            box.appendChild(textContent);
-            
-            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, text, side); });
-            wrapper.appendChild(box);
-            appendReactionsContainer(wrapper, reactions);
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
+            const box = document.createElement('div'); box.className = 'msg-box';
+            if (replyTo) {
+                box.innerHTML = `<div class="reply-quote"><div class="reply-quote-sender">${replyTo.sender === 'out' ? 'Вы' : replyTo.senderId || 'Пир'}</div><div class="reply-quote-text">${replyTo.text}</div></div>`;
+            }
+            const txt = document.createElement('span'); txt.innerHTML = parseMarkdownAndLinks(text); box.appendChild(txt);
+            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, text, side, senderId); });
+            wrapper.appendChild(box); appendReactionsContainer(wrapper, reactions);
+            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
         }
 
-        function renderFileMessage(filename, filetype, dataUrl, side, id, replyTo = null, reactions = []) {
+        function renderFileMessage(filename, filetype, dataUrl, side, id, replyTo = null, reactions = [], senderId = '') {
             const container = document.getElementById('messages');
-            const wrapper = document.createElement('div');
-            wrapper.className = `msg-wrapper ${side}`;
-            wrapper.setAttribute('data-msg-id', id);
+            const wrapper = document.createElement('div'); wrapper.className = `msg-wrapper ${side}`; wrapper.setAttribute('data-msg-id', id);
             
-            const box = document.createElement('div');
-            box.className = 'msg-box';
-
-            if (replyTo) {
-                const quoteDiv = document.createElement('div');
-                quoteDiv.className = 'reply-quote';
-                quoteDiv.innerHTML = `
-                    <div class="reply-quote-sender">${replyTo.sender === 'out' ? 'Вы' : 'Пир'}</div>
-                    <div class="reply-quote-text">${replyTo.text}</div>
-                `;
-                box.appendChild(quoteDiv);
+            if(senderId && side === 'in') {
+                const s = document.createElement('div'); s.className = 'msg-sender-id'; s.innerText = senderId; wrapper.appendChild(s);
             }
-
+            const box = document.createElement('div'); box.className = 'msg-box';
             if (filetype.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = dataUrl;
-                box.appendChild(img);
+                box.innerHTML = `<img src="${dataUrl}">`;
+            } else if (filetype.startsWith('video/')) {
+                box.innerHTML = `<video src="${dataUrl}" controls></video>`;
             } else {
-                const link = document.createElement('a');
-                link.href = dataUrl;
-                link.download = filename;
-                link.className = 'file-link';
-                link.innerHTML = `<span>📁 ${filename}</span>`;
-                box.appendChild(link);
+                box.innerHTML = `<a href="${dataUrl}" download="${filename}" class="file-link">📁 ${filename}</a>`;
             }
-            
-            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, filename, side); });
-            wrapper.appendChild(box);
-            appendReactionsContainer(wrapper, reactions);
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
+            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, filename, side, senderId); });
+            wrapper.appendChild(box); appendReactionsContainer(wrapper, reactions);
+            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
         }
 
-        function renderVoiceMessage(dataUrl, side, id, replyTo = null, reactions = []) {
+        function renderVoiceMessage(dataUrl, side, id, replyTo = null, reactions = [], senderId = '') {
             const container = document.getElementById('messages');
-            const wrapper = document.createElement('div');
-            wrapper.className = `msg-wrapper ${side}`;
-            wrapper.setAttribute('data-msg-id', id);
-            
-            const box = document.createElement('div');
-            box.className = 'msg-box';
-
-            if (replyTo) {
-                const quoteDiv = document.createElement('div');
-                quoteDiv.className = 'reply-quote';
-                quoteDiv.innerHTML = `
-                    <div class="reply-quote-sender">${replyTo.sender === 'out' ? 'Вы' : 'Пир'}</div>
-                    <div class="reply-quote-text">${replyTo.text}</div>
-                `;
-                box.appendChild(quoteDiv);
+            const wrapper = document.createElement('div'); wrapper.className = `msg-wrapper ${side}`; wrapper.setAttribute('data-msg-id', id);
+            if(senderId && side === 'in') {
+                const s = document.createElement('div'); s.className = 'msg-sender-id'; s.innerText = senderId; wrapper.appendChild(s);
             }
-
+            const box = document.createElement('div'); box.className = 'msg-box';
             const audio = new Audio(dataUrl);
-            const playerDiv = document.createElement('div');
-            playerDiv.className = 'tg-voice-player';
-            playerDiv.innerHTML = `
-                <button class="tg-play-btn">▶</button>
-                <div class="tg-voice-info">
-                    <div class="tg-timeline"><div class="tg-waveform-bg"><div class="tg-waveform-progress"></div></div></div>
-                    <span class="tg-time">0:00</span>
-                </div>
-            `;
-
-            const playBtn = playerDiv.querySelector('.tg-play-btn');
-            const progress = playerDiv.querySelector('.tg-waveform-progress');
-            const timeEl = playerDiv.querySelector('.tg-time');
-            const timeline = playerDiv.querySelector('.tg-timeline');
-
-            audio.addEventListener('loadedmetadata', () => {
-                const min = Math.floor(audio.duration / 60);
-                const sec = Math.floor(audio.duration % 60);
-                timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-            });
-            audio.addEventListener('timeupdate', () => {
-                const pct = (audio.currentTime / audio.duration) * 100;
-                progress.style.width = `${pct}%`;
-                const min = Math.floor(audio.currentTime / 60);
-                const sec = Math.floor(audio.currentTime % 60);
-                timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-            });
-            audio.addEventListener('ended', () => { playBtn.innerText = '▶'; progress.style.width = '0%'; });
-            playBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (audio.paused) { audio.play(); playBtn.innerText = '⏸'; } else { audio.pause(); playBtn.innerText = '▶'; }
-            });
-            timeline.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const rect = timeline.getBoundingClientRect();
-                audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-            });
-
-            box.appendChild(playerDiv);
-            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, 'Голосовое сообщение', side); });
-            wrapper.appendChild(box);
-            appendReactionsContainer(wrapper, reactions);
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // 4. Фича: Вкладка «Общие медиа» (Media Shared)
-        function buildSharedMediaTab() {
-            const grid = document.getElementById('sharedMedia');
-            grid.innerHTML = '';
-            chatHistory.forEach(msg => {
-                if (msg.msgType === 'file') {
-                    const thumb = document.createElement('div');
-                    thumb.className = 'media-thumb';
-                    if (msg.filetype.startsWith('image/')) {
-                        thumb.style.backgroundImage = `url(${msg.payload})`;
-                        thumb.onclick = () => {
-                            const w = window.open();
-                            w.document.write(`<img src="${msg.payload}" style="max-width:100%;">`);
-                        };
-                    } else {
-                        thumb.innerText = '📄';
-                        thumb.title = msg.filename;
-                        thumb.onclick = () => {
-                            const a = document.createElement('a');
-                            a.href = msg.payload; a.download = msg.filename; a.click();
-                        };
-                    }
-                    grid.appendChild(thumb);
-                } else if (msg.msgType === 'voice') {
-                    const thumb = document.createElement('div');
-                    thumb.className = 'media-thumb';
-                    thumb.innerText = '🎵';
-                    thumb.onclick = () => { new Audio(msg.payload).play(); };
-                    grid.appendChild(thumb);
-                }
-            });
+            box.innerHTML = `<div class="tg-voice-player"><button class="tg-play-btn">▶</button><div class="tg-voice-info"><div class="tg-timeline"><div class="tg-waveform-bg"><div class="tg-waveform-progress"></div></div></div><span class="tg-time">0:00</span></div></div>`;
+            
+            const btn = box.querySelector('.tg-play-btn'); const prg = box.querySelector('.tg-waveform-progress'); const tm = box.querySelector('.tg-time');
+            audio.addEventListener('timeupdate', () => { prg.style.width = `${(audio.currentTime / audio.duration) * 100}%`; tm.innerText = `${Math.floor(audio.currentTime/60)}:${Math.floor(audio.currentTime%60).toString().padStart(2,'0')}`; });
+            btn.addEventListener('click', (e) => { e.stopPropagation(); if(audio.paused){ audio.play(); btn.innerText='⏸';}else{audio.pause(); btn.innerText='▶';} });
+            
+            box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, 'Голосовое', side, senderId); });
+            wrapper.appendChild(box); appendReactionsContainer(wrapper, reactions);
+            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
         }
 
         function switchTab(tab) {
             activeTab = tab;
             document.getElementById('tabDialogBtn').classList.toggle('active', tab === 'dialog');
             document.getElementById('tabMediaBtn').classList.toggle('active', tab === 'media');
-            
             document.getElementById('messages').style.display = tab === 'dialog' ? 'flex' : 'none';
             document.getElementById('sharedMedia').style.display = tab === 'media' ? 'grid' : 'none';
-            document.getElementById('inputContainer').style.display = tab === 'dialog' ? 'flex' : 'none';
-            document.getElementById('searchWrapper').style.display = tab === 'dialog' ? 'flex' : 'none';
-
-            if (tab === 'media') buildSharedMediaTab();
+            if (tab === 'media') {
+                const grid = document.getElementById('sharedMedia'); grid.innerHTML = '';
+                getFilteredHistory(activeChatId).forEach(msg => {
+                    if(msg.msgType === 'file' || msg.msgType === 'voice') {
+                        const d = document.createElement('div'); d.className = 'media-thumb'; d.innerText = msg.msgType==='voice'?'🎵':'📄';
+                        grid.appendChild(d);
+                    }
+                });
+            }
         }
 
-        // 5. Фича: Локальный поиск по сообщениям
         function handleLocalSearch() {
             const q = document.getElementById('localSearchInput').value.toLowerCase().trim();
-            const filtered = chatHistory.filter(msg => {
-                if (!q) return true;
-                if (msg.msgType === 'text' && msg.payload.toLowerCase().includes(q)) return true;
-                if (msg.msgType === 'file' && msg.filename.toLowerCase().includes(q)) return true;
-                return false;
+            const container = document.getElementById('messages'); container.innerHTML = '';
+            getFilteredHistory(activeChatId).forEach(msg => {
+                if(!q || (msg.payload && msg.payload.toLowerCase().includes(q))) {
+                    if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions, msg.sender);
+                }
             });
-            renderAllMessages(filtered);
         }
 
         function renderAllMessages(historyArray) {
-            const container = document.getElementById('messages');
-            container.innerHTML = '';
+            const container = document.getElementById('messages'); container.innerHTML = '';
             historyArray.forEach(msg => {
-                if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
-                else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
-                else if (msg.msgType === 'voice') renderVoiceMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
+                if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions, msg.sender);
+                else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions, msg.sender);
+                else if (msg.msgType === 'voice') renderVoiceMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions, msg.sender);
             });
         }
 
-        function openContextMenu(e, msgId, textContent, side) {
+        function openContextMenu(e, msgId, textContent, side, senderId) {
             const menu = document.getElementById('msgContextMenu');
-            activeContextMenuTarget = { id: msgId, text: textContent, sender: side };
-            menu.style.display = 'flex';
-            let top = e.clientY; let left = e.clientX;
-            if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
-            if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
-            menu.style.top = `${top}px`; menu.style.left = `${left}px`;
+            activeContextMenuTarget = { id: msgId, text: textContent, sender: side, senderId: senderId };
+            menu.style.display = 'flex'; menu.style.top = `${Math.min(e.clientY, window.innerHeight - 150)}px`; menu.style.left = `${Math.min(e.clientX, window.innerWidth - 230)}px`;
         }
 
-        function closeContextMenu() { document.getElementById('msgContextMenu').style.display = 'none'; }
-        document.addEventListener('click', closeContextMenu);
+        document.addEventListener('click', () => { document.getElementById('msgContextMenu').style.display = 'none'; });
 
         async function triggerReaction(emoji) {
             if (!activeContextMenuTarget) return;
             const tId = activeContextMenuTarget.id;
-            
-            updateReactionOnDOM(tId, emoji);
             updateReactionInStorage(tId, emoji);
-            
-            await sendEncryptedPacket({ type: 'reaction', msgId: tId, emoji: emoji });
-            closeContextMenu();
-        }
-
-        function updateReactionOnDOM(msgId, emoji) {
-            const wrapper = document.querySelector(`[data-msg-id="${msgId}"]`);
-            if (!wrapper) return;
-            const itemInHistory = chatHistory.find(m => m.id === msgId);
-            let reactions = itemInHistory ? itemInHistory.reactions : [];
-            const idx = reactions.indexOf(emoji);
-            if (idx > -1) reactions.splice(idx, 1); else reactions.push(emoji);
-            appendReactionsContainer(wrapper, reactions);
+            await broadcastPacket({ type: 'reaction', msgId: tId, emoji: emoji });
+            renderAllMessages(getFilteredHistory(activeChatId));
         }
 
         function updateReactionInStorage(msgId, emoji) {
-            const index = chatHistory.findIndex(m => m.id === msgId);
-            if (index !== -1) {
-                if (!chatHistory[index].reactions) chatHistory[index].reactions = [];
-                const idx = chatHistory[index].reactions.indexOf(emoji);
-                if (idx > -1) chatHistory[index].reactions.splice(idx, 1); else chatHistory[index].reactions.push(emoji);
-                localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
+            const idx = chatHistory.findIndex(m => m.id === msgId);
+            if (idx !== -1) {
+                if (!chatHistory[idx].reactions) chatHistory[idx].reactions = [];
+                const rIdx = chatHistory[idx].reactions.indexOf(emoji);
+                if (rIdx > -1) chatHistory[idx].reactions.splice(rIdx, 1); else chatHistory[idx].reactions.push(emoji);
+                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
             }
         }
 
         function contextCopy() { if (activeContextMenuTarget) navigator.clipboard.writeText(activeContextMenuTarget.text); }
         function contextDelete() {
             if (!activeContextMenuTarget) return;
-            const tid = activeContextMenuTarget.id;
-            const el = document.querySelector(`[data-msg-id="${tid}"]`);
-            if (el) el.remove();
-            chatHistory = chatHistory.filter(m => m.id !== tid);
-            localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
+            chatHistory = chatHistory.filter(m => m.id !== activeContextMenuTarget.id);
+            localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
+            renderAllMessages(getFilteredHistory(activeChatId)); renderRoomsDOM();
         }
 
         function contextReply() {
             if (!activeContextMenuTarget) return;
-            currentReplyTarget = { id: activeContextMenuTarget.id, text: activeContextMenuTarget.text, sender: activeContextMenuTarget.sender };
-            const indicator = document.getElementById('activeReplyIndicator');
-            document.getElementById('activeReplySender').innerText = activeContextMenuTarget.sender === 'out' ? 'Ответ на ваше сообщение' : 'Ответ собеседнику';
+            currentReplyTarget = { id: activeContextMenuTarget.id, text: activeContextMenuTarget.text, sender: activeContextMenuTarget.sender, senderId: activeContextMenuTarget.senderId };
+            document.getElementById('activeReplyIndicator').style.display = 'flex';
             document.getElementById('activeReplyText').innerText = activeContextMenuTarget.text;
-            indicator.style.display = 'flex';
-            document.getElementById('msgInput').focus();
         }
 
-        function contextForward() { console.log("Переслать:", activeContextMenuTarget?.text); }
-        function contextPin() { console.log("Закрепить:", activeContextMenuTarget?.text); }
         function cancelReply() { currentReplyTarget = null; document.getElementById('activeReplyIndicator').style.display = 'none'; }
-
-        function saveToStorage(obj) {
-            if (!obj.reactions) obj.reactions = [];
-            chatHistory.push(obj);
-            try { localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory)); } catch(e) { chatHistory.shift(); }
-        }
-
+        function saveToStorage(obj) { chatHistory.push(obj); localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory)); }
+        
         function clearHistory() {
-            if (confirm("Удалить историю локально?")) {
-                localStorage.removeItem('p2p_chat_history'); chatHistory = [];
-                document.getElementById('messages').innerHTML = '';
-                if(activeTab === 'media') buildSharedMediaTab();
-            }
-        }
-
-        function updateIceConfig() {
-            const type = document.getElementById('iceConfig').value;
-            if (type === 'global') {
-                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
-            } else if (type === 'google') {
-                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-            } else { currentIceServers = []; }
-            if (peer) {
-                alert("Сеть будет перезапущена.");
-                peer.destroy();
-                setTimeout(initPeerJS, 500);
+            if (confirm("Удалить всю историю текущего чата?")) {
+                chatHistory = chatHistory.filter(m => m.roomId !== activeChatId);
+                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
+                renderAllMessages([]); renderRoomsDOM();
             }
         }
     </script>
