@@ -116,6 +116,9 @@
         .header-title-container {
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            flex: 1;
+            margin-right: 10px;
         }
 
         .header-title {
@@ -123,6 +126,9 @@
             font-weight: 600;
             color: var(--text-main);
             letter-spacing: -0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .header-status-text {
@@ -130,12 +136,16 @@
             color: var(--text-muted);
             height: 16px;
             margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .header-controls {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
 
         .status-badge {
@@ -197,7 +207,7 @@
             max-height: 100%;
             background-color: var(--bg-card);
             z-index: 30;
-            transition: transform 0.2s ease, margin-left 0.2s ease;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             flex-shrink: 0;
         }
 
@@ -232,6 +242,12 @@
             font-size: 0.8rem;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
+        }
+        @media (prefers-color-scheme: dark) {
+            .p2p-panel button.action-btn {
+                background-color: #ffffff;
+                color: #000000;
+            }
         }
         .p2p-panel button.action-btn:hover {
             background-color: var(--bg-input);
@@ -376,6 +392,31 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .action-row-share {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            margin-bottom: 4px;
+        }
+
+        .btn-share-id {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-share-id:hover {
+            background-color: var(--border);
         }
 
         .participant-list {
@@ -716,7 +757,6 @@
             flex-shrink: 0;
             background-color: var(--bg-card);
             border-top: 1px solid var(--border);
-            margin-top: auto;
         }
 
         .input-wrapper {
@@ -814,7 +854,6 @@
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             display: none;
             flex-direction: column;
             overflow: hidden;
@@ -950,7 +989,6 @@
             font-weight: 400;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         }
         
         .call-profile-pic img, .call-profile-pic video {
@@ -988,6 +1026,7 @@
             gap: 24px;
             align-items: center;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .call-interactive-btn-container {
@@ -1057,15 +1096,44 @@
             from { opacity: 0; } to { opacity: 1; }
         }
 
+        /* АДАПТИВНОСТЬ ПОД МОБИЛЬНЫЕ УСТРОЙСТВА */
         @media (max-width: 768px) {
-            body { padding: 0; }
-            .workspace { max-width: 100%; height: 100dvh; border-radius: 0; border: none; }
-            .p2p-panel { 
-                position: absolute; left: 0; top: 0; bottom: 0; width: 280px;
-                box-shadow: 10px 0 30px rgba(0,0,0,0.7);
-                transform: translateX(-100%); margin-left: 0 !important;
+            body { 
+                padding: 0; 
             }
-            .p2p-panel.open { transform: translateX(0); }
+            .workspace { 
+                max-width: 100%; 
+                height: 100dvh; 
+                border-radius: 0; 
+                border: none; 
+            }
+            .p2p-panel { 
+                position: absolute; 
+                left: 0; top: 0; bottom: 0; 
+                width: 290px;
+                transform: translateX(-100%); 
+                margin-left: 0 !important;
+                border-right: 1px solid var(--border);
+                box-shadow: none;
+            }
+            .p2p-panel.open { 
+                transform: translateX(0); 
+            }
+            .modes-bar {
+                padding: 10px 14px 0 14px;
+            }
+            .search-wrapper {
+                width: 130px;
+            }
+            .messages-container {
+                padding: 14px;
+            }
+            .msg-wrapper {
+                max-width: 88%;
+            }
+            .input-container {
+                padding: 10px 14px 14px 14px;
+            }
         }
     </style>
 </head>
@@ -1073,16 +1141,16 @@
 
     <div class="p2p-progress-toast" id="p2pProgress">Передача: 0%</div>
 
-    <!-- ЭКРАН СИСТЕМЫ ЗВОНКОВ ПО НОВОМУ МАКЕТУ -->
+    <!-- ЭКРАН СИСТЕМЫ ЗВОНКОВ -->
     <div class="call-overlay" id="callOverlay">
         <div class="call-window-controls">⏤ &nbsp; 🗖 &nbsp; ✕</div>
         
         <div class="call-main-content">
             <div class="call-shields-bg"></div>
             <div class="call-avatar-container">
-                <div class="call-profile-pic" id="callAvatarDOM">V</div>
+                <div class="call-profile-pic" id="callAvatarDOM">M</div>
             </div>
-            <div class="call-username" id="callNameDOM">Вадим</div>
+            <div class="call-username" id="callNameDOM">max_pc</div>
             <div class="call-status-label" id="callStatusDOM">ожидание...</div>
         </div>
         
@@ -1111,7 +1179,7 @@
                 </div>
 
                 <div class="call-interactive-btn-container" id="acceptCallContainer">
-                    <button class="call-action-circle answer-green" onclick="acceptIncomingCall()">
+                    <button class="call-action-circle answer-green" id="btnAcceptCall">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </button>
                     <span class="call-btn-description">Ответить</span>
@@ -1135,7 +1203,7 @@
                 <div class="header-status-text" id="headerStatusText"></div>
             </div>
             <div class="header-controls">
-                <!-- Кнопки вызова (Аудио и Видео) -->
+                <!-- Кнопки вызова -->
                 <button class="btn-icon" onclick="initiateCall('audio')" title="Аудиозвонок" id="audioCallButton" style="display:none">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                 </button>
@@ -1171,8 +1239,13 @@
                 <div class="chats-section-title">Чаты</div>
                 <div class="chats-list-container" id="chatsListDOM"></div>
 
-                <div class="panel-footer-block" style="position: relative;">
-                    <button class="action-btn" style="width: 100%; margin-bottom: 4px;" onclick="toggleAddChatModal()">+ Добавить чат</button>
+                <div class="panel-footer-block">
+                    <div class="action-row-share">
+                        <button class="action-btn" style="flex: 1;" onclick="toggleAddChatModal()">+ Добавить чат</button>
+                        <button class="btn-share-id" onclick="shareMyInviteLink()" title="Поделиться инвайт-ссылкой">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        </button>
+                    </div>
                     
                     <div class="add-chat-modal" id="addChatModal">
                         <div class="panel-title">Новое подключение</div>
@@ -1191,7 +1264,7 @@
             </div>
 
             <!-- ЗОНА ДИАЛОГА -->
-            <div class="chat-area">
+            <div class="chat-area" onclick="closePanelOnMobileClick()">
                 <div class="modes-bar">
                     <div class="modes-left">
                         <button class="pill-btn active" id="tabDialogBtn" onclick="switchTab('dialog')">💬 Диалог</button>
@@ -1319,7 +1392,24 @@
 
             initPeerJS();
             renderRoomsDOM();
-            switchActiveChat(activeChatId);
+
+            // Проверка инвайт-ссылки в URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteId = urlParams.get('invite');
+            if (inviteId && inviteId.trim() !== "" && inviteId !== myUserId) {
+                if (!rooms.some(r => r.id === inviteId)) {
+                    rooms.push({ id: inviteId, name: inviteId, type: 'user', participants: [] });
+                    localStorage.setItem('p2p_rooms', JSON.stringify(rooms));
+                }
+                setTimeout(() => {
+                    switchActiveChat(inviteId);
+                    connectToPeerById(inviteId);
+                    // Чистим URL, чтобы не добавлять повторно при рефреше
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 1000);
+            } else {
+                switchActiveChat(activeChatId);
+            }
         });
 
         async function deriveCryptoKeyFromInput() {
@@ -1374,6 +1464,8 @@
             peer.on('connection', (conn) => { setupDataChannel(conn); });
             
             peer.on('call', (call) => {
+                const isVideoCall = call.options && call.options.metadata && call.options.metadata.type === 'video';
+                
                 if (callState === 'active' && rooms.find(r => r.id === activeChatId)?.type === 'group') {
                     call.answer(localStream);
                     setupMediaCallHandlers(call);
@@ -1387,6 +1479,7 @@
                 }
                 
                 currentCall = call;
+                currentCallType = isVideoCall ? 'video' : 'audio';
                 showCallOverlay('ringing', call.peer);
             });
 
@@ -1452,10 +1545,7 @@
                     const senderId = conn.peer;
                     
                     let targetRoom = decryptedPacket.roomId || senderId;
-                    
-                    if (targetRoom === myUserId) {
-                        targetRoom = senderId;
-                    }
+                    if (targetRoom === myUserId) targetRoom = senderId;
 
                     if (!rooms.some(r => r.id === targetRoom)) {
                         targetRoom = 'global_main';
@@ -1497,6 +1587,15 @@
                     }
                     renderRoomsDOM();
                 }
+            });
+        }
+
+        function shareMyInviteLink() {
+            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${myUserId}`;
+            navigator.clipboard.writeText(inviteUrl).then(() => {
+                alert('Ссылка-приглашение скопирована в буфер обмена!');
+            }).catch(() => {
+                alert(`Не удалось скопировать. Ваш инвайт-URL:\n${inviteUrl}`);
             });
         }
 
@@ -1574,6 +1673,7 @@
             const callStatusDOM = document.getElementById('callStatusDOM');
             const avatarDOM = document.getElementById('callAvatarDOM');
             const acceptContainer = document.getElementById('acceptCallContainer');
+            const btnAccept = document.getElementById('btnAcceptCall');
 
             overlay.style.display = 'flex';
             avatarDOM.innerHTML = targetId.charAt(0).toUpperCase();
@@ -1583,8 +1683,9 @@
                 callStatusDOM.innerText = 'ожидание...';
                 acceptContainer.style.display = 'none';
             } else if (state === 'ringing') {
-                callStatusDOM.innerText = 'входящий звонок...';
+                callStatusDOM.innerText = currentCallType === 'video' ? 'входящий видеозвонок...' : 'входящий аудиозвонок...';
                 acceptContainer.style.display = 'flex';
+                btnAccept.onclick = () => acceptIncomingCall();
             } else if (state === 'active') {
                 callStatusDOM.innerText = 'разговор...';
                 acceptContainer.style.display = 'none';
@@ -1599,13 +1700,14 @@
             currentCallType = type;
 
             try {
+                // Разрешение на камеру просим ТОЛЬКО если это видеозвонок
                 const constraints = { audio: true, video: type === 'video' };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 displayLocalStream();
 
                 if (room.type === 'user') {
                     showCallOverlay('calling', room.id);
-                    const call = peer.call(room.id, localStream);
+                    const call = peer.call(room.id, localStream, { metadata: { type: type } });
                     currentCall = call;
                     setupMediaCallHandlers(call);
                 } else {
@@ -1614,7 +1716,7 @@
                     targets.forEach(tId => {
                         if (connections[tId] && connections[tId].open) {
                             connections[tId].send({ type: 'call_system', action: 'group_call_started', roomId: room.id });
-                            const call = peer.call(tId, localStream);
+                            const call = peer.call(tId, localStream, { metadata: { type: type } });
                             activeCalls[tId] = call;
                             setupMediaCallHandlers(call);
                         }
@@ -1637,7 +1739,9 @@
         async function acceptIncomingCall() {
             if (!currentCall && rooms.find(r => r.id === activeChatId)?.type !== 'group') return;
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                // Запрос разрешений исключительно в момент ответа на звонок
+                const constraints = { audio: true, video: currentCallType === 'video' };
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 displayLocalStream();
 
                 if (currentCall) {
@@ -1650,14 +1754,14 @@
                     let targets = room.id === 'global_main' ? Object.keys(connections) : room.participants;
                     targets.forEach(tId => {
                         if (connections[tId] && connections[tId].open) {
-                            const call = peer.call(tId, localStream);
+                            const call = peer.call(tId, localStream, { metadata: { type: currentCallType } });
                             activeCalls[tId] = call;
                             setupMediaCallHandlers(call);
                         }
                     });
                 }
             } catch (err) {
-                alert('Ошибка доступа к медиаустройствам: ' + err);
+                alert('Ошибка доступа к устройствам: ' + err);
                 hangUpCall();
             }
         }
@@ -1749,11 +1853,9 @@
         function hangUpCall() {
             if (currentCall) currentCall.close();
             Object.values(activeCalls).forEach(c => c.close());
-            
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
             }
-            
             localStream = null;
             currentCall = null;
             activeCalls = {};
@@ -1958,6 +2060,13 @@
             else panel.classList.toggle('collapsed');
         }
 
+        function closePanelOnMobileClick() {
+            const panel = document.getElementById('p2pPanel');
+            if (window.innerWidth <= 768 && panel.classList.contains('open')) {
+                panel.classList.remove('open');
+            }
+        }
+
         async function broadcastPacket(packet) {
             packet.roomId = activeChatId; 
             const stringified = JSON.stringify(packet);
@@ -1967,11 +2076,7 @@
             let targets = [];
 
             if (currentRoom && currentRoom.type === 'group') {
-                if(currentRoom.id === 'global_main') {
-                    targets = Object.keys(connections);
-                } else {
-                    targets = currentRoom.participants;
-                }
+                targets = currentRoom.id === 'global_main' ? Object.keys(connections) : currentRoom.participants;
             } else {
                 targets = [activeChatId];
             }
