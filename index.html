@@ -1916,15 +1916,23 @@
             const avatarDOM = document.getElementById('callAvatarDOM');
             const videoTracks = stream.getVideoTracks();
             
+            // Очищаем DOM перед вставкой нового стрима
+            avatarDOM.innerHTML = '';
+
             if (videoTracks.length > 0 && videoTracks[0].enabled) {
-                avatarDOM.innerHTML = '';
+                // Если есть видео-дорожка
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 video.autoplay = true;
                 video.playsInline = true;
                 avatarDOM.appendChild(video);
             } else {
+                // Если только аудиозвонок, создаем скрытый элемент тега аудио, чтобы гарантировать вывод звука
                 avatarDOM.innerHTML = peerId.charAt(0).toUpperCase();
+                const audio = document.createElement('audio');
+                audio.srcObject = stream;
+                audio.autoplay = true;
+                avatarDOM.appendChild(audio);
             }
         }
 
@@ -2152,7 +2160,6 @@
             const currentRoom = rooms.find(r => r.id === id);
             if (!currentRoom) return;
 
-            // Убран выделенный текст (Вы: id) с верхней панели
             document.getElementById('chatTitle').innerText = `${currentRoom.name}`;
             
             const audioBtnDOM = document.getElementById('audioCallButton');
