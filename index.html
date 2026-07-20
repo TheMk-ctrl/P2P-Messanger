@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>P2P Workspace Pro</title>
+    <!-- ПОДКЛЮЧЕНИЕ БИБЛИОТЕК -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --bg-outer: #f4f5f6;
@@ -217,12 +221,6 @@
             cursor: not-allowed;
         }
 
-        .p2p-panel button.secondary {
-            background-color: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-        }
-
         .p2p-panel button.danger-link {
             background-color: transparent;
             border: 1px dashed rgba(255, 77, 79, 0.3);
@@ -242,20 +240,20 @@
             font-size: 0.85rem;
         }
 
-        textarea.token-area {
-            width: 100%;
-            height: 65px;
+        .id-input-wrapper {
+            display: flex;
+            gap: 6px;
+        }
+
+        .id-input-wrapper input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
             background-color: var(--bg-input);
-            border: 1px solid transparent;
-            border-radius: 10px;
+            border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 12px 14px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            resize: none;
             outline: none;
-            box-sizing: border-box;
-            flex-shrink: 0;
+            font-size: 0.85rem;
         }
 
         .chat-area {
@@ -316,7 +314,11 @@
             margin-top: 4px;
         }
 
-        /* Контейнер для отображения реакций на сообщении */
+        .msg-box a {
+            color: var(--tg-voice-progress);
+            text-decoration: underline;
+        }
+
         .msg-reactions-container {
             display: flex;
             gap: 4px;
@@ -482,11 +484,30 @@
             align-items: center;
             margin-bottom: 4px;
             flex-shrink: 0;
+            gap: 8px;
         }
         
         .modes-left {
             display: flex;
             gap: 8px;
+        }
+
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-input);
+            border-radius: 12px;
+            padding: 2px 8px;
+            width: 180px;
+        }
+
+        .search-wrapper input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 0.8rem;
+            color: var(--text-main);
         }
 
         .pill-btn {
@@ -514,7 +535,6 @@
             border-top: 1px solid var(--border);
         }
 
-        /* Исправленный инпут-контейнер */
         .input-wrapper {
             background-color: var(--bg-input);
             border-radius: 24px;
@@ -535,7 +555,7 @@
             color: var(--text-main);
             font-size: 0.95rem;
             height: 40px;
-            min-width: 0; /* Важно, чтобы флекс не ломал ширину */
+            min-width: 0;
         }
 
         .input-icon {
@@ -556,7 +576,6 @@
             animation: pulse 0.8s infinite alternate;
         }
 
-        /* Исправленная кнопка «Отправить» */
         .btn-send {
             width: 36px;
             height: 36px;
@@ -569,7 +588,7 @@
             cursor: not-allowed;
             color: var(--text-muted);
             transition: all 0.2s;
-            flex-shrink: 0; /* Кнопка больше никогда не сожмется и не улетит */
+            flex-shrink: 0;
             opacity: 0.6;
         }
         .btn-send.active {
@@ -593,7 +612,6 @@
             z-index: 500;
         }
 
-        /* Контекстное меню */
         .msg-context-menu {
             position: fixed;
             z-index: 1000;
@@ -674,6 +692,48 @@
             color: #ff4d4f;
         }
 
+        /* Дополнительные медиа/звонки UI */
+        .shared-media-container {
+            display: none;
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            align-content: start;
+        }
+        .media-thumb {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            background-color: var(--bg-input);
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .call-overlay {
+            position: absolute;
+            top: 0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            gap: 20px;
+        }
+        .call-btn-hangup {
+            background: #ff4d4f;
+            border: none; color: white;
+            padding: 12px 24px; border-radius: 30px;
+            cursor: pointer; font-weight: bold;
+        }
+
         @media (max-width: 680px) {
             body { padding: 0; }
             .workspace { max-width: 100%; height: 100dvh; border-radius: 0; border: none; }
@@ -692,10 +752,17 @@
     <div class="p2p-progress-toast" id="p2pProgress">Передача: 0%</div>
 
     <div class="workspace">
+        <div class="call-overlay" id="callOverlay">
+            <h2 id="callStatusText">Аудиозвонок...</h2>
+            <audio id="remoteAudio" autoplay></audio>
+            <button class="call-btn-hangup" onclick="hangUpCall()">Завершить</button>
+        </div>
+
         <div class="header">
-            <div class="header-title">P2P Workspace Pro</div>
+            <div class="header-title" id="chatTitle">Загрузка...</div>
             <div class="header-controls">
-                <div id="status" class="status-badge">Ожидание p2p</div>
+                <button class="btn-icon" id="callBtn" onclick="startAudioCall()" style="display:none;" title="Позвонить пиру">📞</button>
+                <div id="status" class="status-badge">Инициализация</div>
                 <button class="btn-icon" onclick="togglePanel()" title="Конфигурация шлюза">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1  1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 </button>
@@ -704,39 +771,44 @@
 
         <div class="main-content">
             <div class="p2p-panel" id="p2pPanel">
-                <div class="panel-title">Шаг 1: Инициализация</div>
-                <button onclick="createOffer()">Создать комнату</button>
+                <div class="panel-title">Мой Уникальный ID</div>
+                <div class="id-input-wrapper">
+                    <input type="text" id="myIdField" placeholder="Введите ваш ID">
+                    <button onclick="updateMyId()">ОК</button>
+                </div>
                 
-                <div class="panel-title">Ваш токен связи:</div>
-                <textarea id="localKey" class="token-area" readonly placeholder="Токен сгенерируется автоматически"></textarea>
+                <div class="panel-title">Поиск собеседника</div>
+                <div class="id-input-wrapper">
+                    <input type="text" id="searchIdField" placeholder="ID человека">
+                    <button onclick="searchAndConnect()">Найти</button>
+                </div>
                 
-                <div class="panel-title">Шаг 2: Удалённый узел</div>
-                <textarea id="remoteKey" class="token-area" placeholder="Вставьте токен пира или перейдите по шеринг-ссылке"></textarea>
-                <button onclick="acceptRemoteKey()">Подключить токен</button>
+                <div class="panel-title">Секретный Ключ E2EE</div>
+                <div class="id-input-wrapper">
+                    <input type="password" id="e2eeKeyField" placeholder="Ключ шифрования" oninput="deriveCryptoKeyFromInput()">
+                </div>
                 
-                <div class="panel-title">Параметры безопасности</div>
-                <select id="cryptoType">
-                    <option value="webrtc">Стандартное (WebRTC DTLS/SRTP)</option>
-                </select>
-
                 <label class="panel-title" style="display:block; margin-top:8px; margin-bottom:4px;">ICE-Инфраструктура</label>
                 <select id="iceConfig" onchange="updateIceConfig()">
-                    <option value="google">Google STUN (Внешняя сеть)</option>
-                    <option value="local">Localhost / LAN</option>
+                    <option value="global">Cloudflare + Google STUN (Макс. доступность)</option>
+                    <option value="google">Только Google STUN</option>
+                    <option value="local">Localhost / LAN (Без серверов)</option>
                 </select>
-                
-                <div class="panel-title">Быстрое подключение</div>
-                <button class="secondary" id="btnShareCode" onclick="shareConnectionLink()">🔗 Поделиться ссылкой</button>
                 
                 <button class="danger-link" onclick="clearHistory()">🗑 Очистить историю чата</button>
             </div>
 
             <div class="chat-area">
                 <div class="messages-container" id="messages"></div>
+                <div class="shared-media-container" id="sharedMedia"></div>
 
                 <div class="modes-bar">
                     <div class="modes-left">
-                        <button class="pill-btn active">💬 Диалог</button>
+                        <button class="pill-btn active" id="tabDialogBtn" onclick="switchTab('dialog')">💬 Диалог</button>
+                        <button class="pill-btn" id="tabMediaBtn" onclick="switchTab('media')">🖼 Медиа</button>
+                    </div>
+                    <div class="search-wrapper" id="searchWrapper">
+                        <input type="text" id="localSearchInput" placeholder="Поиск сообщений..." oninput="handleLocalSearch()">
                     </div>
                 </div>
 
@@ -750,7 +822,7 @@
                     </div>
                 </div>
 
-                <div class="input-container">
+                <div class="input-container" id="inputContainer">
                     <div class="input-wrapper">
                         <input type="file" id="fileField" onchange="processFileSelection(this)" style="display:none">
                         
@@ -773,7 +845,6 @@
         </div>
     </div>
 
-    <!-- Контекстное меню -->
     <div class="msg-context-menu" id="msgContextMenu">
         <div class="reactions-panel">
             <div class="reaction-item" onclick="triggerReaction('💖')">💖</div>
@@ -786,35 +857,44 @@
             <div class="reaction-item more-btn">∨</div>
         </div>
         <div class="menu-item" onclick="contextReply()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
             Ответить
         </div>
         <div class="menu-item" onclick="contextCopy()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             Копировать
         </div>
         <div class="menu-item" onclick="contextForward()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"></polyline><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg>
             Переслать
         </div>
         <div class="menu-item" onclick="contextPin()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.11V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6.11c0 .43-.14.85-.4 1.19L5.44 14a2 2 0 0 0-.44 1.24z"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.11V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6.11c0 .43-.14.85-.4 1.19L5.44 14a2 2 0 0 0-.44 1.24z"></path></svg>
             Закрепить
         </div>
         <div class="menu-item danger" onclick="contextDelete()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
             Удалить
         </div>
     </div>
 
     <script>
-        let peerConnection;
-        let dataChannel;
+        // PEER JS LOGIC
+        let peer = null;
+        let dataChannel = null; 
+        let currentCall = null;
+        let localAudioStream = null;
+        
+        let myUserId = '';
+        let targetUserId = ''; 
+
         let typingTimeout;
+        let heartbeatInterval = null;
         let isConnectedState = false;
         let chatHistory = [];
         let activeContextMenuTarget = null;
         let currentReplyTarget = null;
+        let activeTab = 'dialog';
 
         let incomingFileBuffer = [];
         let incomingFileName = '';
@@ -825,51 +905,206 @@
         let audioChunks = [];
         let isRecording = false;
 
-        let currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+        // E2EE Переменные (CryptoKey объект)
+        let derivedE2eeKey = null;
+        const CRYPTO_SALT = CryptoJS.enc.Hex.parse("4d61785369646f726f765032504368617453616c74"); // Статическая соль
+
+        let currentIceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun.cloudflare.com:3478' }
+        ];
+
+        // Настройка парсера Markdown
+        marked.setOptions({ gfm: true, breaks: true, pure: true });
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('p2p_chat_history');
             if (saved) {
                 try {
                     chatHistory = JSON.parse(saved);
-                    chatHistory.forEach(msg => {
-                        if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
-                        else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
-                        else if (msg.msgType === 'voice') renderVoiceMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
-                    });
+                    renderAllMessages(chatHistory);
                 } catch (e) { console.error(e); }
             } else {
-                renderTextMessage("Чат готов к работе.", 'in', 'welcome_msg');
+                renderTextMessage("Чат готов. Задайте общий **Секретный Ключ E2EE** с пиром для приватного общения.", 'in', 'welcome_msg');
             }
 
-            if (window.location.hash && window.location.hash.length > 1) {
-                processIncomingHash();
+            myUserId = localStorage.getItem('p2p_my_id');
+            if (!myUserId || myUserId.trim() === "") {
+                myUserId = 'peer_' + Math.random().toString(36).substr(2, 6);
+                localStorage.setItem('p2p_my_id', myUserId);
             }
+            document.getElementById('myIdField').value = myUserId;
+            document.getElementById('chatTitle').innerText = `Вы: ${myUserId}`;
+
+            // Восстановление пароля E2EE из сессии если был
+            const savedPass = sessionStorage.getItem('p2p_e2ee_pass');
+            if (savedPass) {
+                document.getElementById('e2eeKeyField').value = savedPass;
+                deriveCryptoKeyFromInput();
+            }
+
+            initPeerJS();
         });
 
-        async function processIncomingHash() {
-            const incomingToken = window.location.hash.substring(1);
-            document.getElementById('remoteKey').value = incomingToken;
-            setStatus('Установка соединения по ссылке...');
+        // 1. КРИПТОГРАФИЯ: Деривация ключа PBKDF2 -> AES-GCM 256
+        async function deriveCryptoKeyFromInput() {
+            const password = document.getElementById('e2eeKeyField').value;
+            if (!password) {
+                derivedE2eeKey = null;
+                sessionStorage.removeItem('p2p_e2ee_pass');
+                return;
+            }
+            sessionStorage.setItem('p2p_e2ee_pass', password);
+
+            const baseKey = await crypto.subtle.importKey(
+                "raw",
+                new TextEncoder().encode(password),
+                "PBKDF2",
+                false,
+                ["deriveKey"]
+            );
+
+            // Соль переводим в Uint8Array
+            const saltBytes = new Uint8Array(CRYPTO_SALT.words.length * 4);
+            for (let i = 0; i < CRYPTO_SALT.words.length; i++) {
+                const word = CRYPTO_SALT.words[i];
+                saltBytes[i * 4] = (word >> 24) & 0xFF;
+                saltBytes[i * 4 + 1] = (word >> 16) & 0xFF;
+                saltBytes[i * 4 + 2] = (word >> 8) & 0xFF;
+                saltBytes[i * 4 + 3] = word & 0xFF;
+            }
+
+            derivedE2eeKey = await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: saltBytes,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                baseKey,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        async function encryptData(stringData) {
+            if (!derivedE2eeKey) return { encrypted: false, payload: stringData };
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(stringData);
+            
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                derivedE2eeKey,
+                encoded
+            );
+
+            return {
+                encrypted: true,
+                iv: Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join(''),
+                ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+            };
+        }
+
+        async function decryptData(packet) {
+            if (!packet.encrypted) return packet.payload;
+            if (!derivedE2eeKey) return "🚨 [Сообщение зашифровано. Введите верный E2EE ключ в панели]";
+
             try {
-                const remoteDesc = JSON.parse(atob(incomingToken));
-                peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
-                peerConnection.ondatachannel = (e) => setupDataChannel(e.channel);
-                bindPeerEvents(peerConnection);
+                const iv = new Uint8Array(packet.iv.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                const encryptedBytes = new Uint8Array(atob(packet.ciphertext).split("").map(c => c.charCodeAt(0)));
                 
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                setTimeout(() => {
-                    const sdpData = { type: peerConnection.localDescription.type, sdp: peerConnection.localDescription.sdp };
-                    const responseToken = btoa(JSON.stringify(sdpData));
-                    document.getElementById('localKey').value = responseToken;
-                    navigator.clipboard.writeText(responseToken).then(() => {
-                        alert("Ответный токен скопирован. Передайте его инициатору для завершения рукопожатия!");
-                    });
-                }, 500);
-            } catch(e) { setStatus('Ошибка разбора хеш-ссылки'); }
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    derivedE2eeKey,
+                    encryptedBytes
+                );
+                return new TextDecoder().decode(decrypted);
+            } catch (e) {
+                return "🚨 [Ошибка декодирования E2EE. Неверный ключ шлюза]";
+            }
+        }
+
+        function initPeerJS() {
+            setStatus('Подключение к сети...');
+            
+            peer = new Peer(myUserId, {
+                config: { iceServers: currentIceServers, sdpSemantics: 'unified-plan' },
+                secure: true, debug: 0
+            });
+
+            peer.on('open', (id) => {
+                myUserId = id;
+                localStorage.setItem('p2p_my_id', myUserId);
+                document.getElementById('chatTitle').innerText = `Вы: ${myUserId}`;
+                setStatus('Сервер онлайн', 'connected');
+            });
+
+            peer.on('connection', (conn) => {
+                if (dataChannel && dataChannel.open) { conn.close(); return; }
+                targetUserId = conn.peer;
+                setupDataChannel(conn);
+            });
+
+            // 6. Мультимедиа: Входящий аудиозвонок
+            peer.on('call', async (call) => {
+                if (confirm(`Входящий P2P вызов от ${call.peer}. Ответить?`)) {
+                    try {
+                        localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        currentCall = call;
+                        call.answer(localAudioStream);
+                        showCallUI(true, "Разговор...");
+                        
+                        call.on('stream', (remoteStream) => {
+                            document.getElementById('remoteAudio').srcObject = remoteStream;
+                        });
+                        call.on('close', hangUpCall);
+                    } catch(e) {
+                        alert("Не удалось активировать аудио-устройства.");
+                    }
+                } else {
+                    call.close();
+                }
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    myUserId = 'peer_' + Math.random().toString(36).substr(2, 6);
+                    document.getElementById('myIdField').value = myUserId;
+                    localStorage.setItem('p2p_my_id', myUserId);
+                    initPeerJS(); 
+                } else if (err.type === 'peer-unavailable') {
+                    alert(`Собеседник не найден.`);
+                    setStatus('Сервер онлайн', 'connected');
+                }
+            });
+
+            peer.on('disconnected', () => {
+                peer.reconnect();
+            });
+        }
+
+        function updateMyId() {
+            const newId = document.getElementById('myIdField').value.trim();
+            if (newId && newId !== myUserId) {
+                myUserId = newId;
+                localStorage.setItem('p2p_my_id', myUserId);
+                if (peer) peer.destroy();
+                setTimeout(initPeerJS, 500);
+            }
+        }
+
+        function searchAndConnect() {
+            const searchId = document.getElementById('searchIdField').value.trim();
+            if (!searchId || searchId === myUserId) return;
+            
+            if (peer && !peer.disconnected) {
+                setStatus(`Соединение с ${searchId}...`);
+                const conn = peer.connect(searchId, { reliable: true });
+                targetUserId = searchId;
+                setupDataChannel(conn);
+            }
         }
 
         function setStatus(text, state = 'default') {
@@ -886,136 +1121,140 @@
             else panel.classList.toggle('collapsed');
         }
 
-        function generateLocalToken() {
-            if (!peerConnection || !peerConnection.localDescription) return;
-            const sdpData = { type: peerConnection.localDescription.type, sdp: peerConnection.localDescription.sdp };
-            document.getElementById('localKey').value = btoa(JSON.stringify(sdpData));
-        }
-
-        function bindPeerEvents(pc) {
-            pc.onicecandidate = () => generateLocalToken();
-            pc.oniceconnectionstatechange = () => {
-                if (pc.iceConnectionState === 'checking') setStatus('Синхронизация...');
-                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') setStatus('В сети', 'connected');
-                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-                    setStatus('Разъединено');
-                    toggleInterfaceStates(false);
-                }
-            };
-        }
-
-        async function createOffer() {
-            peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
-            setupDataChannel(peerConnection.createDataChannel("chat"));
-            bindPeerEvents(peerConnection);
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            generateLocalToken();
-        }
-
-        async function acceptRemoteKey() {
-            const rawKey = document.getElementById('remoteKey').value.trim();
-            if (!rawKey) return alert('Поместите токен в поле ввода.');
-            try {
-                const remoteDesc = JSON.parse(atob(rawKey));
-                if (!peerConnection) {
-                    peerConnection = new RTCPeerConnection({ iceServers: currentIceServers });
-                    peerConnection.ondatachannel = (e) => setupDataChannel(e.channel);
-                    bindPeerEvents(peerConnection);
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    generateLocalToken();
-                } else {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
-                }
-            } catch (err) { alert('Ошибка структуры ключа.'); }
-        }
-
         function toggleInterfaceStates(enabled) {
             document.getElementById('msgInput').disabled = !enabled;
+            document.getElementById('callBtn').style.display = enabled ? 'block' : 'none';
             const sendBtn = document.getElementById('btnSend');
             sendBtn.disabled = !enabled;
             if(enabled) sendBtn.classList.add('active'); else sendBtn.classList.remove('active');
         }
 
-        function setupDataChannel(channel) {
-            dataChannel = channel;
-            dataChannel.bufferedAmountLowThreshold = 16384; 
+        // 3. Фича: Автономный Heartbeat (Пинг-Понг статуса соединения)
+        function startHeartbeat() {
+            stopHeartbeat();
+            let missedPings = 0;
+            heartbeatInterval = setInterval(() => {
+                if (dataChannel && dataChannel.open) {
+                    dataChannel.send({ type: 'ping' });
+                    missedPings++;
+                    if (missedPings > 2) {
+                        setStatus("Соединение нестабильно", "default");
+                    }
+                }
+            }, 5000);
 
-            dataChannel.onopen = () => {
+            return () => { missedPings = 0; };
+        }
+
+        function stopHeartbeat() {
+            if(heartbeatInterval) clearInterval(heartbeatInterval);
+        }
+
+        function setupDataChannel(conn) {
+            dataChannel = conn;
+            const resetMissed = startHeartbeat();
+
+            dataChannel.on('open', () => {
                 isConnectedState = true;
-                setStatus('В сети', 'connected');
+                setStatus(`В сети с ${targetUserId}`, 'connected');
                 toggleInterfaceStates(true);
                 document.getElementById('p2pPanel').classList.remove('open');
-            };
-            dataChannel.onclose = () => {
+            });
+
+            dataChannel.on('close', () => {
                 isConnectedState = false;
-                setStatus('Разъединено');
+                setStatus('Собеседник отключился', 'default');
                 toggleInterfaceStates(false);
-            };
-            dataChannel.onmessage = (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    if (data.type === 'typing') {
-                        setStatus(data.isTyping ? 'Печатает...' : 'В сети', data.isTyping ? 'typing' : 'connected');
-                    } else if (data.type === 'text') {
-                        const mId = data.id || 'msg_' + Date.now();
-                        renderTextMessage(data.payload, 'in', mId, data.replyTo);
-                        saveToStorage({ id: mId, msgType: 'text', payload: data.payload, side: 'in', replyTo: data.replyTo, reactions: [] });
-                    } else if (data.type === 'reaction') {
-                        updateReactionOnDOM(data.msgId, data.emoji);
-                        updateReactionInStorage(data.msgId, data.emoji);
-                    } else if (data.type === 'file-start') {
+                stopHeartbeat();
+                dataChannel = null;
+            });
+
+            dataChannel.on('data', async (rawData) => {
+                const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+                
+                // Обработка Heartbeat без расшифровки
+                if (data.type === 'ping') {
+                    if(dataChannel && dataChannel.open) dataChannel.send({ type: 'pong' });
+                    return;
+                }
+                if (data.type === 'pong') {
+                    resetMissed();
+                    if(document.getElementById('status').innerText === "Соединение нестабильно") {
+                        setStatus(`В сети с ${targetUserId}`, 'connected');
+                    }
+                    return;
+                }
+
+                if (data.type === 'typing') {
+                    setStatus(data.isTyping ? 'Печатает...' : `В сети с ${targetUserId}`, data.isTyping ? 'typing' : 'connected');
+                    return;
+                }
+
+                // Расшифровка защищенных пакетов данных
+                if (data.encryptedPayload) {
+                    const decryptedString = await decryptData(data.encryptedPayload);
+                    let decryptedPacket = JSON.parse(decryptedString);
+
+                    if (decryptedPacket.type === 'text') {
+                        renderTextMessage(decryptedPacket.payload, 'in', decryptedPacket.id, decryptedPacket.replyTo);
+                        saveToStorage({ id: decryptedPacket.id, msgType: 'text', payload: decryptedPacket.payload, side: 'in', replyTo: decryptedPacket.replyTo, reactions: [] });
+                    } else if (decryptedPacket.type === 'reaction') {
+                        updateReactionOnDOM(decryptedPacket.msgId, decryptedPacket.emoji);
+                        updateReactionInStorage(decryptedPacket.msgId, decryptedPacket.emoji);
+                    } else if (decryptedPacket.type === 'file-start') {
                         incomingFileBuffer = [];
-                        incomingFileName = data.filename;
-                        incomingFileType = data.filetype;
-                        incomingFileReply = data.replyTo;
+                        incomingFileName = decryptedPacket.filename;
+                        incomingFileType = decryptedPacket.filetype;
+                        incomingFileReply = decryptedPacket.replyTo;
                         document.getElementById('p2pProgress').style.display = 'block';
-                        document.getElementById('p2pProgress').innerText = 'Получение файла...';
-                    } else if (data.type === 'file-chunk') {
-                        incomingFileBuffer.push(data.chunk);
-                        if (data.pct) document.getElementById('p2pProgress').innerText = `Получение: ${data.pct}%`;
-                    } else if (data.type === 'file-end') {
+                    } else if (decryptedPacket.type === 'file-chunk') {
+                        incomingFileBuffer.push(decryptedPacket.chunk);
+                    } else if (decryptedPacket.type === 'file-end') {
                         document.getElementById('p2pProgress').style.display = 'none';
                         const fullPayload = incomingFileBuffer.join('');
-                        const mId = data.id || 'msg_' + Date.now();
                         
                         if (incomingFileType.startsWith('audio/')) {
-                            renderVoiceMessage(fullPayload, 'in', mId, incomingFileReply);
-                            saveToStorage({ id: mId, msgType: 'voice', payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
+                            renderVoiceMessage(fullPayload, 'in', decryptedPacket.id, incomingFileReply);
+                            saveToStorage({ id: decryptedPacket.id, msgType: 'voice', payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
                         } else {
-                            renderFileMessage(incomingFileName, incomingFileType, fullPayload, 'in', mId, incomingFileReply);
-                            saveToStorage({ id: mId, msgType: 'file', filename: incomingFileName, filetype: incomingFileType, payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
+                            renderFileMessage(incomingFileName, incomingFileType, fullPayload, 'in', decryptedPacket.id, incomingFileReply);
+                            saveToStorage({ id: decryptedPacket.id, msgType: 'file', filename: incomingFileName, filetype: incomingFileType, payload: fullPayload, side: 'in', replyTo: incomingFileReply, reactions: [] });
                         }
                         incomingFileBuffer = [];
                     }
-                } catch(err) {
-                    const mId = 'msg_' + Date.now();
-                    renderTextMessage(e.data, 'in', mId);
-                    saveToStorage({ id: mId, msgType: 'text', payload: e.data, side: 'in', reactions: [] });
+                    if(activeTab === 'media') buildSharedMediaTab();
                 }
-            };
+            });
         }
 
         function sendTypingSignal() {
-            if (!dataChannel || dataChannel.readyState !== 'open') return;
-            dataChannel.send(JSON.stringify({ type: 'typing', isTyping: true }));
+            if (!dataChannel || !dataChannel.open) return;
+            dataChannel.send({ type: 'typing', isTyping: true });
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
-                dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
+                if (dataChannel && dataChannel.open) dataChannel.send({ type: 'typing', isTyping: false });
             }, 1500);
         }
 
-        function sendMessage() {
+        // Отправка обернутого в E2EE пакета
+        async function sendEncryptedPacket(packet) {
+            const stringified = JSON.stringify(packet);
+            const cryptoContainer = await encryptData(stringified);
+            if (dataChannel && dataChannel.open) {
+                dataChannel.send({ encryptedPayload: cryptoContainer });
+            }
+        }
+
+        async function sendMessage() {
             const input = document.getElementById('msgInput');
             const text = input.value.trim();
-            if (!text || !dataChannel || dataChannel.readyState !== 'open') return;
+            if (!text || !dataChannel || !dataChannel.open) return;
             
             const mId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
             const packet = { type: 'text', payload: text, id: mId, replyTo: currentReplyTarget };
             
-            dataChannel.send(JSON.stringify(packet));
+            await sendEncryptedPacket(packet);
+            
             renderTextMessage(text, 'out', mId, currentReplyTarget);
             saveToStorage({ id: mId, msgType: 'text', payload: text, side: 'out', replyTo: currentReplyTarget, reactions: [] });
             
@@ -1023,42 +1262,31 @@
             cancelReply();
         }
 
-        function sendMediaDataInChunks(base64Data, filename, mimeType) {
+        async function sendMediaDataInChunks(base64Data, filename, mimeType) {
             const mId = 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
             const progressIndicator = document.getElementById('p2pProgress');
             progressIndicator.style.display = 'block';
 
-            dataChannel.send(JSON.stringify({
-                type: 'file-start',
-                filename: filename,
-                filetype: mimeType,
-                replyTo: currentReplyTarget
-            }));
+            await sendEncryptedPacket({
+                type: 'file-start', filename: filename, filetype: mimeType, replyTo: currentReplyTarget
+            });
 
-            const CHUNK_SIZE = 16384;
+            const CHUNK_SIZE = 12000; // Меньший размер чанка снижает накладные расходы криптографии
             let offset = 0;
-
-            function sendNextChunk() {
+            
+            async function sendNextChunk() {
                 while (offset < base64Data.length) {
-                    if (dataChannel.bufferedAmount > dataChannel.bufferedAmountLowThreshold) {
-                        dataChannel.onbufferedamountlow = () => {
-                            dataChannel.onbufferedamountlow = null;
-                            sendNextChunk();
-                        };
-                        return;
-                    }
-
                     const chunk = base64Data.slice(offset, offset + CHUNK_SIZE);
                     offset += CHUNK_SIZE;
                     const pct = Math.min(100, Math.floor((offset / base64Data.length) * 100));
-                    
                     progressIndicator.innerText = `Отправка: ${pct}%`;
-                    dataChannel.send(JSON.stringify({ type: 'file-chunk', chunk: chunk, pct: pct }));
+                    
+                    await sendEncryptedPacket({ type: 'file-chunk', chunk: chunk });
                 }
 
                 if (offset >= base64Data.length) {
                     progressIndicator.style.display = 'none';
-                    dataChannel.send(JSON.stringify({ type: 'file-end', id: mId }));
+                    await sendEncryptedPacket({ type: 'file-end', id: mId });
                     
                     if (mimeType.startsWith('audio/')) {
                         renderVoiceMessage(base64Data, 'out', mId, currentReplyTarget);
@@ -1067,6 +1295,7 @@
                         renderFileMessage(filename, mimeType, base64Data, 'out', mId, currentReplyTarget);
                         saveToStorage({ id: mId, msgType: 'file', filename: filename, filetype: mimeType, payload: base64Data, side: 'out', replyTo: currentReplyTarget, reactions: [] });
                     }
+                    if(activeTab === 'media') buildSharedMediaTab();
                     cancelReply();
                 }
             }
@@ -1075,26 +1304,21 @@
 
         function processFileSelection(input) {
             const file = input.files[0];
-            if (!file || !dataChannel || dataChannel.readyState !== 'open') return;
-
+            if (!file || !dataChannel || !dataChannel.open) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const arrayBuffer = e.target.result;
+                const bytes = new Uint8Array(e.target.result);
                 let binary = '';
-                const bytes = new Uint8Array(arrayBuffer);
-                const len = bytes.byteLength;
-                for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
-                
+                for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
                 const mime = file.type || "application/octet-stream";
-                const base64Data = `data:${mime};base64,` + btoa(binary);
-                sendMediaDataInChunks(base64Data, file.name, mime);
+                sendMediaDataInChunks(`data:${mime};base64,` + btoa(binary), file.name, mime);
             };
             reader.readAsArrayBuffer(file);
             input.value = '';
         }
 
         async function toggleVoiceRecord() {
-            if (!dataChannel || dataChannel.readyState !== 'open') return;
+            if (!dataChannel || !dataChannel.open) return;
             const micBtn = document.getElementById('micBtn');
 
             if (!isRecording) {
@@ -1102,34 +1326,68 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     audioChunks = [];
                     mediaRecorder = new MediaRecorder(stream);
-                    
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) audioChunks.push(e.data);
-                    };
-
+                    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
                     mediaRecorder.onstop = () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                            sendMediaDataInChunks(reader.result, 'voice.webm', 'audio/webm');
-                        };
+                        reader.onloadend = () => sendMediaDataInChunks(reader.result, 'voice.webm', 'audio/webm');
                         reader.readAsDataURL(audioBlob);
-                        stream.getTracks().forEach(track => track.stop());
                     };
-
                     mediaRecorder.start();
                     isRecording = true;
                     micBtn.classList.add('recording');
-                } catch (err) {
-                    alert('Доступ к микрофону заблокирован или не поддерживается.');
-                }
+                } catch (err) { alert('Микрофон недоступен.'); }
             } else {
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                }
+                if (mediaRecorder) mediaRecorder.stop();
                 isRecording = false;
                 micBtn.classList.remove('recording');
             }
+        }
+
+        // 6. Фича: Инициация P2P звонка (WebRTC Audio Calls)
+        async function startAudioCall() {
+            if(!dataChannel || !dataChannel.open) return;
+            try {
+                localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                showCallUI(true, "Вызов пира...");
+                
+                const call = peer.call(targetUserId, localAudioStream);
+                currentCall = call;
+                
+                call.on('stream', (remoteStream) => {
+                    document.getElementById('remoteAudio').srcObject = remoteStream;
+                    document.getElementById('callStatusText').innerText = "В разговоре";
+                });
+                call.on('close', hangUpCall);
+            } catch (e) {
+                alert("Ошибка захвата микрофона для звонка.");
+            }
+        }
+
+        function hangUpCall() {
+            showCallUI(false);
+            if (currentCall) { currentCall.close(); currentCall = null; }
+            if (localAudioStream) {
+                localAudioStream.getTracks().forEach(track => track.stop());
+                localAudioStream = null;
+            }
+        }
+
+        function showCallUI(show, statusText = "") {
+            const overlay = document.getElementById('callOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+            if(statusText) document.getElementById('callStatusText').innerText = statusText;
+        }
+
+        // 2. Фича: Рендеринг Markdown & Автоссылки
+        function parseMarkdownAndLinks(text) {
+            // Экранируем теги для безопасности
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            // Регулярное выражение для автоссылок
+            const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            safeText = safeText.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+            // Парсинг Markdown через Marked
+            return marked.parseInline(safeText);
         }
 
         function appendReactionsContainer(wrapper, reactions) {
@@ -1141,7 +1399,6 @@
             }
             container.innerHTML = '';
             if (reactions && reactions.length > 0) {
-                // Группируем одинаковые эмодзи
                 const counts = {};
                 reactions.forEach(r => counts[r] = (counts[r] || 0) + 1);
                 for (const [emoji, count] of Object.entries(counts)) {
@@ -1150,9 +1407,7 @@
                     badge.innerText = count > 1 ? `${emoji} ${count}` : emoji;
                     container.appendChild(badge);
                 }
-            } else {
-                container.remove();
-            }
+            } else { container.remove(); }
         }
 
         function renderTextMessage(text, side, id, replyTo = null, reactions = []) {
@@ -1175,7 +1430,7 @@
             }
             
             const textContent = document.createElement('span');
-            textContent.innerText = text;
+            textContent.innerHTML = parseMarkdownAndLinks(text);
             box.appendChild(textContent);
             
             box.addEventListener('click', (e) => { e.stopPropagation(); openContextMenu(e, id, text, side); });
@@ -1244,17 +1499,12 @@
             }
 
             const audio = new Audio(dataUrl);
-            
             const playerDiv = document.createElement('div');
             playerDiv.className = 'tg-voice-player';
             playerDiv.innerHTML = `
                 <button class="tg-play-btn">▶</button>
                 <div class="tg-voice-info">
-                    <div class="tg-timeline">
-                        <div class="tg-waveform-bg">
-                            <div class="tg-waveform-progress"></div>
-                        </div>
-                    </div>
+                    <div class="tg-timeline"><div class="tg-waveform-bg"><div class="tg-waveform-progress"></div></div></div>
                     <span class="tg-time">0:00</span>
                 </div>
             `;
@@ -1269,7 +1519,6 @@
                 const sec = Math.floor(audio.duration % 60);
                 timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
             });
-
             audio.addEventListener('timeupdate', () => {
                 const pct = (audio.currentTime / audio.duration) * 100;
                 progress.style.width = `${pct}%`;
@@ -1277,29 +1526,15 @@
                 const sec = Math.floor(audio.currentTime % 60);
                 timeEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
             });
-
-            audio.addEventListener('ended', () => {
-                playBtn.innerText = '▶';
-                progress.style.width = '0%';
-            });
-
+            audio.addEventListener('ended', () => { playBtn.innerText = '▶'; progress.style.width = '0%'; });
             playBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (audio.paused) {
-                    audio.play();
-                    playBtn.innerText = '⏸';
-                } else {
-                    audio.pause();
-                    playBtn.innerText = '▶';
-                }
+                if (audio.paused) { audio.play(); playBtn.innerText = '⏸'; } else { audio.pause(); playBtn.innerText = '▶'; }
             });
-
             timeline.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const rect = timeline.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const pct = clickX / rect.width;
-                audio.currentTime = pct * audio.duration;
+                audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
             });
 
             box.appendChild(playerDiv);
@@ -1310,57 +1545,105 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        // 4. Фича: Вкладка «Общие медиа» (Media Shared)
+        function buildSharedMediaTab() {
+            const grid = document.getElementById('sharedMedia');
+            grid.innerHTML = '';
+            chatHistory.forEach(msg => {
+                if (msg.msgType === 'file') {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'media-thumb';
+                    if (msg.filetype.startsWith('image/')) {
+                        thumb.style.backgroundImage = `url(${msg.payload})`;
+                        thumb.onclick = () => {
+                            const w = window.open();
+                            w.document.write(`<img src="${msg.payload}" style="max-width:100%;">`);
+                        };
+                    } else {
+                        thumb.innerText = '📄';
+                        thumb.title = msg.filename;
+                        thumb.onclick = () => {
+                            const a = document.createElement('a');
+                            a.href = msg.payload; a.download = msg.filename; a.click();
+                        };
+                    }
+                    grid.appendChild(thumb);
+                } else if (msg.msgType === 'voice') {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'media-thumb';
+                    thumb.innerText = '🎵';
+                    thumb.onclick = () => { new Audio(msg.payload).play(); };
+                    grid.appendChild(thumb);
+                }
+            });
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.getElementById('tabDialogBtn').classList.toggle('active', tab === 'dialog');
+            document.getElementById('tabMediaBtn').classList.toggle('active', tab === 'media');
+            
+            document.getElementById('messages').style.display = tab === 'dialog' ? 'flex' : 'none';
+            document.getElementById('sharedMedia').style.display = tab === 'media' ? 'grid' : 'none';
+            document.getElementById('inputContainer').style.display = tab === 'dialog' ? 'flex' : 'none';
+            document.getElementById('searchWrapper').style.display = tab === 'dialog' ? 'flex' : 'none';
+
+            if (tab === 'media') buildSharedMediaTab();
+        }
+
+        // 5. Фича: Локальный поиск по сообщениям
+        function handleLocalSearch() {
+            const q = document.getElementById('localSearchInput').value.toLowerCase().trim();
+            const filtered = chatHistory.filter(msg => {
+                if (!q) return true;
+                if (msg.msgType === 'text' && msg.payload.toLowerCase().includes(q)) return true;
+                if (msg.msgType === 'file' && msg.filename.toLowerCase().includes(q)) return true;
+                return false;
+            });
+            renderAllMessages(filtered);
+        }
+
+        function renderAllMessages(historyArray) {
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            historyArray.forEach(msg => {
+                if (msg.msgType === 'text') renderTextMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
+                else if (msg.msgType === 'file') renderFileMessage(msg.filename, msg.filetype, msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
+                else if (msg.msgType === 'voice') renderVoiceMessage(msg.payload, msg.side, msg.id, msg.replyTo, msg.reactions);
+            });
+        }
+
         function openContextMenu(e, msgId, textContent, side) {
             const menu = document.getElementById('msgContextMenu');
             activeContextMenuTarget = { id: msgId, text: textContent, sender: side };
             menu.style.display = 'flex';
-            
-            let top = e.clientY;
-            let left = e.clientX;
+            let top = e.clientY; let left = e.clientX;
             if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
             if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
-            
-            menu.style.top = `${top}px`;
-            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`; menu.style.left = `${left}px`;
         }
 
         function closeContextMenu() { document.getElementById('msgContextMenu').style.display = 'none'; }
         document.addEventListener('click', closeContextMenu);
 
-        /* Исправленная функция проставления реакций */
-        function triggerReaction(emoji) {
+        async function triggerReaction(emoji) {
             if (!activeContextMenuTarget) return;
-            const targetId = activeContextMenuTarget.id;
+            const tId = activeContextMenuTarget.id;
             
-            // Рендерим у себя на UI
-            updateReactionOnDOM(targetId, emoji);
-            // Сохраняем в localStorage
-            updateReactionInStorage(targetId, emoji);
+            updateReactionOnDOM(tId, emoji);
+            updateReactionInStorage(tId, emoji);
             
-            // Отправляем пиру по WebRTC канал связи
-            if (dataChannel && dataChannel.readyState === 'open') {
-                dataChannel.send(JSON.stringify({
-                    type: 'reaction',
-                    msgId: targetId,
-                    emoji: emoji
-                }));
-            }
+            await sendEncryptedPacket({ type: 'reaction', msgId: tId, emoji: emoji });
             closeContextMenu();
         }
 
         function updateReactionOnDOM(msgId, emoji) {
             const wrapper = document.querySelector(`[data-msg-id="${msgId}"]`);
             if (!wrapper) return;
-            
-            // Ищем локальный массив реакций или создаем на основе DOM структуры
             const itemInHistory = chatHistory.find(m => m.id === msgId);
             let reactions = itemInHistory ? itemInHistory.reactions : [];
-            
-            // Реализуем тоггл: если реакция уже есть — убираем, если нет — добавляем
             const idx = reactions.indexOf(emoji);
-            if (idx > -1) reactions.splice(idx, 1);
-            else reactions.push(emoji);
-            
+            if (idx > -1) reactions.splice(idx, 1); else reactions.push(emoji);
             appendReactionsContainer(wrapper, reactions);
         }
 
@@ -1369,17 +1652,12 @@
             if (index !== -1) {
                 if (!chatHistory[index].reactions) chatHistory[index].reactions = [];
                 const idx = chatHistory[index].reactions.indexOf(emoji);
-                if (idx > -1) chatHistory[index].reactions.splice(idx, 1);
-                else chatHistory[index].reactions.push(emoji);
-                
+                if (idx > -1) chatHistory[index].reactions.splice(idx, 1); else chatHistory[index].reactions.push(emoji);
                 localStorage.setItem('p2p_chat_history', JSON.stringify(chatHistory));
             }
         }
 
-        function contextCopy() {
-            if (activeContextMenuTarget) navigator.clipboard.writeText(activeContextMenuTarget.text);
-        }
-
+        function contextCopy() { if (activeContextMenuTarget) navigator.clipboard.writeText(activeContextMenuTarget.text); }
         function contextDelete() {
             if (!activeContextMenuTarget) return;
             const tid = activeContextMenuTarget.id;
@@ -1392,7 +1670,6 @@
         function contextReply() {
             if (!activeContextMenuTarget) return;
             currentReplyTarget = { id: activeContextMenuTarget.id, text: activeContextMenuTarget.text, sender: activeContextMenuTarget.sender };
-            
             const indicator = document.getElementById('activeReplyIndicator');
             document.getElementById('activeReplySender').innerText = activeContextMenuTarget.sender === 'out' ? 'Ответ на ваше сообщение' : 'Ответ собеседнику';
             document.getElementById('activeReplyText').innerText = activeContextMenuTarget.text;
@@ -1402,11 +1679,7 @@
 
         function contextForward() { console.log("Переслать:", activeContextMenuTarget?.text); }
         function contextPin() { console.log("Закрепить:", activeContextMenuTarget?.text); }
-
-        function cancelReply() {
-            currentReplyTarget = null;
-            document.getElementById('activeReplyIndicator').style.display = 'none';
-        }
+        function cancelReply() { currentReplyTarget = null; document.getElementById('activeReplyIndicator').style.display = 'none'; }
 
         function saveToStorage(obj) {
             if (!obj.reactions) obj.reactions = [];
@@ -1416,25 +1689,25 @@
 
         function clearHistory() {
             if (confirm("Удалить историю локально?")) {
-                localStorage.removeItem('p2p_chat_history');
-                chatHistory = [];
+                localStorage.removeItem('p2p_chat_history'); chatHistory = [];
                 document.getElementById('messages').innerHTML = '';
+                if(activeTab === 'media') buildSharedMediaTab();
             }
-        }
-
-        async function shareConnectionLink() {
-            const localKeyVal = document.getElementById('localKey').value.trim();
-            if (!localKeyVal) return alert("Сначала создайте комнату!");
-            const shareUrl = `${window.location.origin}${window.location.pathname}#${localKeyVal}`;
-            await navigator.clipboard.writeText(shareUrl);
-            alert("Ссылка скопирована.");
         }
 
         function updateIceConfig() {
             const type = document.getElementById('iceConfig').value;
-            currentIceServers = (type === 'google') ? [{ urls: 'stun:stun.l.google.com:19302' }] : [];
+            if (type === 'global') {
+                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+            } else if (type === 'google') {
+                currentIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+            } else { currentIceServers = []; }
+            if (peer) {
+                alert("Сеть будет перезапущена.");
+                peer.destroy();
+                setTimeout(initPeerJS, 500);
+            }
         }
     </script>
 </body>
 </html>
-
