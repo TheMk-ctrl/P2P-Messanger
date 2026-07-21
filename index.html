@@ -1291,7 +1291,7 @@
 </head>
 <body>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ (Показывается по умолчанию) -->
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div class="auth-container" id="authScreen">
         <div class="auth-header">
             <div class="auth-title">Вход в P2P Workspace</div>
@@ -1311,7 +1311,7 @@
         <div class="auth-hint">ID будет использоваться для связи с вами в сети P2P. Ключ необходимо хранить в тайне.</div>
     </div>
 
-    <!-- ОСНОВНОЙ ИНТЕРФЕЙС WORKSPACE (Скрыт до входа) -->
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС WORKSPACE -->
     <div class="workspace" id="workspaceScreen" style="display: none;">
         <div class="header">
             <div class="header-title-container">
@@ -1513,6 +1513,10 @@
             <div class="menu-info-row">
                 <span>Время:</span>
                 <span id="infoTimestamp" style="font-weight: 500;">-</span>
+            </div>
+            <div class="menu-info-row">
+                <span>Статус:</span>
+                <span id="infoStatus" style="font-weight: 500;">-</span>
             </div>
             <div class="menu-info-row">
                 <span>ID:</span>
@@ -2793,9 +2797,9 @@
             reader.onload = function(e) {
                 const bytes = new Uint8Array(e.target.result); let binary = '';
                 for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-                sendMediaDataInChunks('data:' + file.type + ';base64,' + btoa(binary), file.name, file.type);
+                sendMediaDataInChunks(btoa(binary), file.name, file.type || 'application/octet-stream');
             };
-            reader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(file); input.value = '';
         }
 
         async function toggleVoiceRecord() {
@@ -2807,45 +2811,249 @@
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.onstop = () => {
                         const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onload = e => sendMediaDataInChunks(e.target.result, 'voice.webm', 'audio/webm');
-                        reader.readAsDataURL(blob);
-                        stream.getTracks().forEach(track => track.stop());
+                        const r = new FileReader();
+                        r.onload = e => sendMediaDataInChunks(e.target.result.split(',')[1], 'voice.webm', 'audio/webm');
+                        r.readAsDataURL(blob);
+                        stream.getTracks().forEach(t => t.stop());
                     };
                     mediaRecorder.start(); isRecording = true; micBtn.classList.add('recording');
                     sendTypingStatus('recording_voice');
-                } catch (e) { alert('Микрофон недоступен: ' + e); }
+                } catch (err) { alert('Микрофон недоступен: ' + err); }
             } else {
                 mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording');
                 sendTypingStatus('active');
             }
         }
 
-        function updateReactionInStorage(msgId, emoji, senderId) {
-            let found = chatHistory.find(m => m.id === msgId);
-            if (found) {
-                if (!found.reactions) found.reactions = {};
-                if (!found.reactions[emoji]) found.reactions[emoji] = [];
-                if (!found.reactions[emoji].includes(senderId)) found.reactions[emoji].push(senderId);
-                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
+        function createReplyBlockDOM(replyToObj) {
+            if (!replyToObj) return '';
+            let senderName = replyToObj.sender || 'Пользователь';
+            let preview = replyToObj.text || 'Сообщение';
+            return `
+                <div class="reply-quote">
+                    <span class="reply-quote-sender">${senderName}</span>
+                    <span class="reply-quote-text">${preview}</span>
+                </div>
+            `;
+        }
+
+        /* 
+           ИЗМЕНЕНИЯ ЗДЕСЬ: 
+           В карточках сообщений РЕНДЕРИТСЯ ТОЛЬКО КОНТЕНТ (без времени и галочек).
+           Время и статус сохраняются в data-атрибутах родительского элемента wrapper для использования в контекстном меню.
+        */
+
+        function renderTextMessage(text, side, msgId, replyTo = null, reactions = {}, senderId = myUserId, timestamp = Date.now(), isRead = false) {
+            const box = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `msg-wrapper ${side}`;
+            wrapper.id = `msg_${msgId}`;
+            
+            /* Сохраняем сервисные данные в метаданные контейнера */
+            wrapper.dataset.sender = senderId || myUserId;
+            wrapper.dataset.timestamp = timestamp;
+            wrapper.dataset.isRead = isRead;
+
+            let replyHtml = createReplyBlockDOM(replyTo);
+            let senderLabel = (side === 'in') ? `<div class="msg-sender-id">${senderId}</div>` : '';
+            let parsedText = marked.parse(text);
+
+            wrapper.innerHTML = `
+                ${senderLabel}
+                <div class="msg-box" oncontextmenu="showContextMenu(event, '${msgId}', '${side}')" onclick="showContextMenu(event, '${msgId}', '${side}')">
+                    ${replyHtml}
+                    ${parsedText}
+                </div>
+                <div class="msg-reactions-container" id="reactions_${msgId}"></div>
+            `;
+            box.appendChild(wrapper);
+            renderReactionsDOM(msgId, reactions);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderVoiceMessage(base64Data, side, msgId, replyTo = null, reactions = {}, senderId = myUserId, timestamp = Date.now(), isRead = false) {
+            const box = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `msg-wrapper ${side}`;
+            wrapper.id = `msg_${msgId}`;
+            
+            wrapper.dataset.sender = senderId || myUserId;
+            wrapper.dataset.timestamp = timestamp;
+            wrapper.dataset.isRead = isRead;
+
+            let replyHtml = createReplyBlockDOM(replyTo);
+            let senderLabel = (side === 'in') ? `<div class="msg-sender-id">${senderId}</div>` : '';
+
+            wrapper.innerHTML = `
+                ${senderLabel}
+                <div class="msg-box" oncontextmenu="showContextMenu(event, '${msgId}', '${side}')" onclick="showContextMenu(event, '${msgId}', '${side}')">
+                    ${replyHtml}
+                    <div class="tg-voice-player">
+                        <button class="tg-play-btn" onclick="event.stopPropagation(); togglePlayVoice('${msgId}')" id="pbtn_${msgId}">▶</button>
+                        <div class="tg-voice-info">
+                            <div class="tg-timeline" onclick="event.stopPropagation(); seekVoice('${msgId}', event)">
+                                <div class="tg-waveform-visual" id="wave_${msgId}">
+                                    ${Array(28).fill(0).map(() => `<div class="tg-wave-bar" style="height: ${Math.floor(Math.random() * 70) + 30}%"></div>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <audio id="audio_${msgId}" src="data:audio/webm;base64,${base64Data}" style="display:none" onended="resetVoicePlayer('${msgId}')" ontimeupdate="updateVoiceProgress('${msgId}')"></audio>
+                </div>
+                <div class="msg-reactions-container" id="reactions_${msgId}"></div>
+            `;
+            box.appendChild(wrapper);
+            renderReactionsDOM(msgId, reactions);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderFileMessage(filename, mimeType, base64Data, side, msgId, replyTo = null, reactions = {}, senderId = myUserId, timestamp = Date.now(), isRead = false) {
+            const box = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `msg-wrapper ${side}`;
+            wrapper.id = `msg_${msgId}`;
+            
+            wrapper.dataset.sender = senderId || myUserId;
+            wrapper.dataset.timestamp = timestamp;
+            wrapper.dataset.isRead = isRead;
+
+            const fileUrl = `data:${mimeType};base64,${base64Data}`;
+            let replyHtml = createReplyBlockDOM(replyTo);
+            let senderLabel = (side === 'in') ? `<div class="msg-sender-id">${senderId}</div>` : '';
+            let content = '';
+
+            if (mimeType.startsWith('image/')) {
+                content = `<img src="${fileUrl}" alt="${filename}">`;
+            } else if (mimeType.startsWith('video/')) {
+                content = `<video src="${fileUrl}" controls></video>`;
+            } else {
+                content = `<a href="${fileUrl}" download="${filename}" class="file-link" onclick="event.stopPropagation()">📄 ${filename}</a>`;
+            }
+
+            wrapper.innerHTML = `
+                ${senderLabel}
+                <div class="msg-box" oncontextmenu="showContextMenu(event, '${msgId}', '${side}')" onclick="showContextMenu(event, '${msgId}', '${side}')">
+                    ${replyHtml}
+                    ${content}
+                </div>
+                <div class="msg-reactions-container" id="reactions_${msgId}"></div>
+            `;
+            box.appendChild(wrapper);
+            renderReactionsDOM(msgId, reactions);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderSystemCallMessage(payload, msgId, timestamp = Date.now()) {
+            const box = document.getElementById('messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'msg-wrapper system-call';
+            wrapper.id = `msg_${msgId}`;
+            
+            wrapper.dataset.sender = 'system';
+            wrapper.dataset.timestamp = timestamp;
+            wrapper.dataset.isRead = true;
+
+            wrapper.innerHTML = `<div class="msg-box" oncontextmenu="showContextMenu(event, '${msgId}', 'system')" onclick="showContextMenu(event, '${msgId}', 'system')">${payload}</div>`;
+            box.appendChild(wrapper);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function togglePlayVoice(msgId) {
+            const audio = document.getElementById(`audio_${msgId}`);
+            const btn = document.getElementById(`pbtn_${msgId}`);
+            if (audio.paused) {
+                document.querySelectorAll('audio').forEach(a => { if (a !== audio) { a.pause(); a.currentTime = 0; } });
+                document.querySelectorAll('.tg-play-btn').forEach(b => b.innerText = '▶');
+                audio.play(); btn.innerText = '⏸';
+            } else {
+                audio.pause(); btn.innerText = '▶';
             }
         }
 
-        async function triggerReaction(emoji) {
-            if (!activeContextMenuTarget) return;
-            updateReactionInStorage(activeContextMenuTarget.id, emoji, myUserId);
-            await broadcastPacket({ type: 'reaction', msgId: activeContextMenuTarget.id, emoji: emoji });
-            renderAllMessages(getFilteredHistory(activeChatId));
-            document.getElementById('msgContextMenu').style.display = 'none';
+        function updateVoiceProgress(msgId) {
+            const audio = document.getElementById(`audio_${msgId}`);
+            const wave = document.getElementById(`wave_${msgId}`);
+            if (!audio.duration) return;
+            const pct = audio.currentTime / audio.duration;
+            const bars = wave.querySelectorAll('.tg-wave-bar');
+            const playedCount = Math.floor(bars.length * pct);
+            bars.forEach((bar, index) => {
+                if (index <= playedCount) bar.classList.add('played');
+                else bar.classList.remove('played');
+            });
+        }
+
+        function resetVoicePlayer(msgId) {
+            const btn = document.getElementById(`pbtn_${msgId}`);
+            const wave = document.getElementById(`wave_${msgId}`);
+            if (btn) btn.innerText = '▶';
+            if (wave) wave.querySelectorAll('.tg-wave-bar').forEach(b => b.classList.remove('played'));
+        }
+
+        function seekVoice(msgId, e) {
+            const audio = document.getElementById(`audio_${msgId}`);
+            const wave = document.getElementById(`wave_${msgId}`);
+            const rect = wave.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            if (audio.duration) audio.currentTime = pos * audio.duration;
+        }
+
+        /* 
+           ОБНОВЛЕННАЯ ФУНКЦИЯ КОНТЕКСТНОГО МЕНЮ:
+           Собирает системные метаданные (отправитель, время в формате UTC+3, статус прочтения)
+           и выводит их в инфо-секции панели контекстного меню.
+        */
+        function showContextMenu(e, msgId, side) {
+            e.preventDefault(); e.stopPropagation();
+            activeContextMenuTarget = msgId;
+            const menu = document.getElementById('msgContextMenu');
+            
+            const wrapper = document.getElementById(`msg_${msgId}`);
+            const msgObj = chatHistory.find(m => m.id === msgId);
+
+            if (wrapper) {
+                const sender = wrapper.dataset.sender || msgObj?.sender || '-';
+                const rawTimestamp = parseInt(wrapper.dataset.timestamp || msgObj?.timestamp || Date.now());
+                const isRead = wrapper.dataset.isRead === 'true' || msgObj?.isRead || false;
+
+                document.getElementById('infoSenderId').innerText = sender;
+                document.getElementById('infoTimestamp').innerText = `${formatDateText(rawTimestamp)} в ${formatTimeText(rawTimestamp)}`;
+                
+                const statusEl = document.getElementById('infoStatus');
+                if (side === 'out') {
+                    statusEl.innerText = isRead ? '✓✓ Прочитано' : '✓ Отправлено';
+                } else if (side === 'in') {
+                    statusEl.innerText = 'Входящее';
+                } else {
+                    statusEl.innerText = 'Системное';
+                }
+                
+                document.getElementById('infoMsgId').innerText = msgId.length > 15 ? msgId.substr(0, 15) + '...' : msgId;
+            }
+
+            let posX = e.clientX; let posY = e.clientY;
+            if (posX + 230 > window.innerWidth) posX = window.innerWidth - 240;
+            if (posY + 280 > window.innerHeight) posY = window.innerHeight - 290;
+
+            menu.style.left = `${Math.max(10, posX)}px`;
+            menu.style.top = `${Math.max(10, posY)}px`;
+            menu.style.display = 'flex';
         }
 
         function contextReply() {
             if (!activeContextMenuTarget) return;
-            currentReplyTarget = { id: activeContextMenuTarget.id, text: activeContextMenuTarget.text, sender: activeContextMenuTarget.sender };
-            document.getElementById('activeReplySender').innerText = `Ответ пользователю: ${currentReplyTarget.sender}`;
-            document.getElementById('activeReplyText').innerText = currentReplyTarget.text;
+            const msgObj = chatHistory.find(m => m.id === activeContextMenuTarget);
+            if (!msgObj) return;
+
+            let textPreview = msgObj.payload;
+            if (msgObj.msgType === 'voice') textPreview = '🎵 Голосовое сообщение';
+            if (msgObj.msgType === 'file') textPreview = `📁 ${msgObj.filename || 'Файл'}`;
+
+            currentReplyTarget = { id: msgObj.id, sender: msgObj.sender || 'Собеседник', text: textPreview };
+
+            document.getElementById('activeReplySender').innerText = `Ответ пользователю ${currentReplyTarget.sender}`;
+            document.getElementById('activeReplyText').innerText = textPreview;
             document.getElementById('activeReplyIndicator').style.display = 'flex';
-            document.getElementById('msgContextMenu').style.display = 'none';
         }
 
         function cancelReply() {
@@ -2854,249 +3062,90 @@
         }
 
         function contextCopy() {
-            if (activeContextMenuTarget && activeContextMenuTarget.text) {
-                navigator.clipboard.writeText(activeContextMenuTarget.text);
+            if (!activeContextMenuTarget) return;
+            const msgObj = chatHistory.find(m => m.id === activeContextMenuTarget);
+            if (msgObj && msgObj.payload) {
+                navigator.clipboard.writeText(msgObj.payload);
             }
-            document.getElementById('msgContextMenu').style.display = 'none';
         }
 
         function contextDelete() {
-            if (activeContextMenuTarget) {
-                chatHistory = chatHistory.filter(m => m.id !== activeContextMenuTarget.id);
-                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
-                renderAllMessages(getFilteredHistory(activeChatId));
-                renderRoomsDOM();
-            }
-            document.getElementById('msgContextMenu').style.display = 'none';
-        }
-
-        function createMessageElement(id, side, replyTo, reactions, senderId, timestamp, isRead) {
-            const wrapper = document.createElement('div');
+            if (!activeContextMenuTarget) return;
+            chatHistory = chatHistory.filter(m => m.id !== activeContextMenuTarget);
+            localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
             
-            if (side === 'system') {
-                wrapper.className = 'msg-wrapper system-call';
-                wrapper.id = id;
-                return wrapper;
-            }
-
-            wrapper.className = `msg-wrapper ${side}`; wrapper.id = id;
-
-            const room = rooms.find(r => r.id === activeChatId);
-            if (room && room.type === 'group') {
-                const senderLabel = document.createElement('div');
-                senderLabel.className = 'msg-sender-id';
-                senderLabel.innerText = senderId === myUserId ? 'Вы' : senderId;
-                wrapper.appendChild(senderLabel);
-            }
-
-            if (replyTo) {
-                const quote = document.createElement('div'); quote.className = 'reply-quote';
-                quote.innerHTML = `<div class="reply-quote-sender">${replyTo.sender || 'Собеседник'}</div><div class="reply-quote-text">${replyTo.text || ''}</div>`;
-                wrapper.appendChild(quote);
-            }
-
-            return wrapper;
+            const el = document.getElementById(`msg_${activeContextMenuTarget}`);
+            if (el) el.remove();
+            
+            renderRoomsDOM();
         }
 
-        function attachReactions(wrapper, reactions) {
-            if (!reactions) return;
-            const container = document.createElement('div'); container.className = 'msg-reactions-container';
-            for (const [emoji, users] of Object.entries(reactions)) {
-                if (users.length > 0) {
-                    const badge = document.createElement('div'); badge.className = 'msg-reaction-badge';
-                    badge.innerText = `${emoji} ${users.length}`; container.appendChild(badge);
-                }
-            }
-            if (container.children.length > 0) wrapper.appendChild(container);
+        async function triggerReaction(emoji) {
+            if (!activeContextMenuTarget) return;
+            const msgId = activeContextMenuTarget;
+            updateReactionInStorage(msgId, emoji, myUserId);
+            
+            await broadcastPacket({ type: 'reaction', msgId: msgId, emoji: emoji });
+            renderAllMessages(getFilteredHistory(activeChatId));
         }
 
-        function attachContextMenu(box, msgId, rawText, senderId, timestamp) {
-            box.addEventListener('contextmenu', (e) => {
-                e.preventDefault(); e.stopPropagation();
-                activeContextMenuTarget = { id: msgId, text: rawText, sender: senderId };
-                const menu = document.getElementById('msgContextMenu');
-                
-                document.getElementById('infoSenderId').innerText = senderId === myUserId ? 'Вы' : senderId;
-                document.getElementById('infoTimestamp').innerText = formatTimeText(timestamp);
-                document.getElementById('infoMsgId').innerText = msgId.substr(0, 10) + '...';
+        function updateReactionInStorage(msgId, emoji, senderId) {
+            const msgObj = chatHistory.find(m => m.id === msgId);
+            if (msgObj) {
+                if (!msgObj.reactions) msgObj.reactions = {};
+                msgObj.reactions[senderId] = emoji;
+                localStorage.setItem('p2p_chat_history_v2', JSON.stringify(chatHistory));
+            }
+        }
 
-                menu.style.top = `${Math.min(e.clientY, window.innerHeight - 250)}px`;
-                menu.style.left = `${Math.min(e.clientX, window.innerWidth - 230)}px`;
-                menu.style.display = 'flex';
+        function renderReactionsDOM(msgId, reactionsObj) {
+            const container = document.getElementById(`reactions_${msgId}`);
+            if (!container || !reactionsObj) return;
+            container.innerHTML = '';
+            
+            const counts = {};
+            Object.values(reactionsObj).forEach(emoji => {
+                counts[emoji] = (counts[emoji] || 0) + 1;
+            });
+
+            Object.entries(counts).forEach(([emoji, count]) => {
+                const badge = document.createElement('div');
+                badge.className = 'msg-reaction-badge';
+                badge.innerText = count > 1 ? `${emoji} ${count}` : emoji;
+                container.appendChild(badge);
             });
         }
 
-        function renderTextMessage(text, side, msgId, replyTo, reactions, senderId, timestamp, isRead) {
+        function renderAllMessages(historyArray) {
             const container = document.getElementById('messages');
-            const wrapper = createMessageElement(msgId, side, replyTo, reactions, senderId, timestamp, isRead);
-            
-            const box = document.createElement('div'); box.className = 'msg-box';
-            
-            let parsedText = text;
-            try {
-                parsedText = marked.parse(text);
-            } catch(e) {}
-
-            const timeStr = formatTimeText(timestamp);
-            let checkmarkHtml = '';
-            if (side === 'out') {
-                checkmarkHtml = isRead ? `<span style="margin-left: 4px; font-weight: bold; font-size: 0.8rem; opacity: 0.8;">✓✓</span>` : `<span style="margin-left: 4px; font-size: 0.8rem; opacity: 0.6;">✓</span>`;
-            }
-
-            box.innerHTML = `${parsedText}<div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.65rem; opacity: 0.6; margin-top: 4px;"><span>${timeStr}</span>${checkmarkHtml}</div>`;
-            
-            wrapper.appendChild(box);
-            attachReactions(wrapper, reactions);
-            attachContextMenu(box, msgId, text, senderId, timestamp);
-            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
-        }
-
-        function renderVoiceMessage(base64Data, side, msgId, replyTo, reactions, senderId, timestamp, isRead) {
-            const container = document.getElementById('messages');
-            const wrapper = createMessageElement(msgId, side, replyTo, reactions, senderId, timestamp, isRead);
-            
-            const box = document.createElement('div'); box.className = 'msg-box';
-            const audio = new Audio(base64Data);
-            
-            const timeStr = formatTimeText(timestamp);
-            let checkmarkHtml = '';
-            if (side === 'out') {
-                checkmarkHtml = isRead ? `<span style="margin-left: 4px; font-weight: bold; font-size: 0.8rem; opacity: 0.8;">✓✓</span>` : `<span style="margin-left: 4px; font-size: 0.8rem; opacity: 0.6;">✓</span>`;
-            }
-
-            const voicePlayer = document.createElement('div');
-            voicePlayer.className = 'tg-voice-player';
-            voicePlayer.innerHTML = `
-                <button class="tg-play-btn">▶</button>
-                <div class="tg-voice-info">
-                    <div class="tg-timeline">
-                        <div class="tg-waveform-visual">
-                            ${Array(28).fill(0).map(() => `<div class="tg-wave-bar" style="height: ${Math.floor(Math.random() * 80) + 20}%"></div>`).join('')}
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; opacity: 0.6; margin-top: 2px;">
-                        <span class="tg-timer">0:00</span>
-                        <div><span>${timeStr}</span>${checkmarkHtml}</div>
-                    </div>
-                </div>
-            `;
-
-            const playBtn = voicePlayer.querySelector('.tg-play-btn');
-            const timer = voicePlayer.querySelector('.tg-timer');
-            const bars = voicePlayer.querySelectorAll('.tg-wave-bar');
-
-            audio.onloadedmetadata = () => {
-                const mins = Math.floor(audio.duration / 60);
-                const secs = Math.floor(audio.duration % 60).toString().padStart(2, '0');
-                timer.innerText = `${mins}:${secs}`;
-            };
-
-            audio.ontimeupdate = () => {
-                const pct = audio.currentTime / audio.duration;
-                const playedBars = Math.floor(pct * bars.length);
-                bars.forEach((bar, idx) => {
-                    bar.classList.toggle('played', idx <= playedBars);
-                });
-                const mins = Math.floor(audio.currentTime / 60);
-                const secs = Math.floor(audio.currentTime % 60).toString().padStart(2, '0');
-                timer.innerText = `${mins}:${secs}`;
-            };
-
-            playBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (audio.paused) {
-                    audio.play(); playBtn.innerText = '⏸';
-                } else {
-                    audio.pause(); playBtn.innerText = '▶';
-                }
-            };
-
-            audio.onended = () => { playBtn.innerText = '▶'; bars.forEach(b => b.classList.remove('played')); };
-
-            box.appendChild(voicePlayer);
-            wrapper.appendChild(box);
-            attachReactions(wrapper, reactions);
-            attachContextMenu(box, msgId, '🎵 Голосовое сообщение', senderId, timestamp);
-            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
-        }
-
-        function renderFileMessage(filename, mimeType, base64Data, side, msgId, replyTo, reactions, senderId, timestamp, isRead) {
-            const container = document.getElementById('messages');
-            const wrapper = createMessageElement(msgId, side, replyTo, reactions, senderId, timestamp, isRead);
-            const box = document.createElement('div'); box.className = 'msg-box';
-
-            const timeStr = formatTimeText(timestamp);
-            let checkmarkHtml = '';
-            if (side === 'out') {
-                checkmarkHtml = isRead ? `<span style="margin-left: 4px; font-weight: bold; font-size: 0.8rem; opacity: 0.8;">✓✓</span>` : `<span style="margin-left: 4px; font-size: 0.8rem; opacity: 0.6;">✓</span>`;
-            }
-
-            if (mimeType.startsWith('image/')) {
-                box.innerHTML = `<img src="${base64Data}" alt="media"><div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.65rem; opacity: 0.6; margin-top: 4px;"><span>${timeStr}</span>${checkmarkHtml}</div>`;
-            } else if (mimeType.startsWith('video/')) {
-                box.innerHTML = `<video src="${base64Data}" controls></video><div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.65rem; opacity: 0.6; margin-top: 4px;"><span>${timeStr}</span>${checkmarkHtml}</div>`;
-            } else {
-                box.innerHTML = `<a class="file-link" href="${base64Data}" download="${filename}">📁 ${filename}</a><div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.65rem; opacity: 0.6; margin-top: 4px;"><span>${timeStr}</span>${checkmarkHtml}</div>`;
-            }
-
-            wrapper.appendChild(box);
-            attachReactions(wrapper, reactions);
-            attachContextMenu(box, msgId, filename, senderId, timestamp);
-            container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
-        }
-
-        function renderSystemCallMessage(payload, msgId, timestamp) {
-            const container = document.getElementById('messages');
-            const wrapper = createMessageElement(msgId, 'system');
-            
-            const box = document.createElement('div');
-            box.className = 'msg-box';
-            box.innerText = payload;
-            
-            wrapper.appendChild(box);
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function renderAllMessages(list) {
-            const container = document.getElementById('messages');
-            const mediaContainer = document.getElementById('sharedMedia');
             container.innerHTML = '';
-            mediaContainer.innerHTML = '';
-
+            
             let lastDateStr = null;
 
-            list.forEach(m => {
-                const currentDateStr = formatDateText(m.timestamp);
-                if (currentDateStr !== lastDateStr && m.msgType !== 'system-call') {
-                    const sep = document.createElement('div');
-                    sep.className = 'tg-date-separator';
-                    sep.innerText = currentDateStr;
-                    container.appendChild(sep);
+            historyArray.forEach(m => {
+                let msgTimestamp = m.timestamp || Date.now();
+                let currentDateStr = formatDateText(msgTimestamp);
+
+                if (currentDateStr !== lastDateStr) {
+                    const dateSeparator = document.createElement('div');
+                    dateSeparator.className = 'tg-date-separator';
+                    dateSeparator.innerText = currentDateStr;
+                    container.appendChild(dateSeparator);
                     lastDateStr = currentDateStr;
                 }
 
-                if (m.msgType === 'text') renderTextMessage(m.payload, m.side, m.id, m.replyTo, m.reactions, m.sender, m.timestamp, m.isRead);
-                else if (m.msgType === 'voice') renderVoiceMessage(m.payload, m.side, m.id, m.replyTo, m.reactions, m.sender, m.timestamp, m.isRead);
-                else if (m.msgType === 'file') renderFileMessage(m.filename, m.filetype, m.payload, m.side, m.id, m.replyTo, m.reactions, m.sender, m.timestamp, m.isRead);
-                else if (m.msgType === 'system-call') renderSystemCallMessage(m.payload, m.id, m.timestamp);
-
-                if (m.msgType === 'file' && m.filetype && (m.filetype.startsWith('image/') || m.filetype.startsWith('video/'))) {
-                    const mediaCard = document.createElement('div');
-                    mediaCard.style.borderRadius = '8px';
-                    mediaCard.style.overflow = 'hidden';
-                    mediaCard.style.aspectRatio = '1/1';
-                    mediaCard.style.backgroundColor = 'var(--bg-input)';
-                    mediaCard.style.border = '1px solid var(--border)';
-
-                    if (m.filetype.startsWith('image/')) {
-                        mediaCard.innerHTML = `<img src="${m.payload}" style="width:100%; height:100%; object-fit:cover;">`;
-                    } else {
-                        mediaCard.innerHTML = `<video src="${m.payload}" style="width:100%; height:100%; object-fit:cover;"></video>`;
-                    }
-                    mediaContainer.appendChild(mediaCard);
+                if (m.msgType === 'text') {
+                    renderTextMessage(m.payload, m.side, m.id, m.replyTo, m.reactions || {}, m.sender, msgTimestamp, m.isRead);
+                } else if (m.msgType === 'voice') {
+                    renderVoiceMessage(m.payload, m.side, m.id, m.replyTo, m.reactions || {}, m.sender, msgTimestamp, m.isRead);
+                } else if (m.msgType === 'file') {
+                    renderFileMessage(m.filename, m.filetype, m.payload, m.side, m.id, m.replyTo, m.reactions || {}, m.sender, msgTimestamp, m.isRead);
+                } else if (m.msgType === 'system-call') {
+                    renderSystemCallMessage(m.payload, m.id, msgTimestamp);
                 }
             });
+            
+            container.scrollTop = container.scrollHeight;
         }
 
         function switchTab(tab) {
@@ -3104,19 +3153,65 @@
             document.getElementById('tabDialogBtn').classList.toggle('active', tab === 'dialog');
             document.getElementById('tabMediaBtn').classList.toggle('active', tab === 'media');
             
-            document.getElementById('messages').style.display = tab === 'dialog' ? 'flex' : 'none';
-            document.getElementById('sharedMedia').style.display = tab === 'media' ? 'grid' : 'none';
-            document.getElementById('inputContainer').style.display = tab === 'dialog' ? 'flex' : 'none';
+            const msgDOM = document.getElementById('messages');
+            const mediaDOM = document.getElementById('sharedMedia');
+            const inputContainer = document.getElementById('inputContainer');
+
+            if (tab === 'dialog') {
+                msgDOM.style.display = 'flex';
+                mediaDOM.style.display = 'none';
+                inputContainer.style.display = 'flex';
+                renderAllMessages(getFilteredHistory(activeChatId));
+            } else {
+                msgDOM.style.display = 'none';
+                mediaDOM.style.display = 'grid';
+                inputContainer.style.display = 'none';
+                renderSharedMedia();
+            }
+        }
+
+        function renderSharedMedia() {
+            const container = document.getElementById('sharedMedia');
+            container.innerHTML = '';
+            const history = getFilteredHistory(activeChatId);
+
+            history.forEach(m => {
+                if (m.msgType === 'file' && m.filetype && (m.filetype.startsWith('image/') || m.filetype.startsWith('video/'))) {
+                    const item = document.createElement('div');
+                    item.style.width = '100%';
+                    item.style.height = '80px';
+                    item.style.borderRadius = '8px';
+                    item.style.overflow = 'hidden';
+                    item.style.border = '1px solid var(--border)';
+                    
+                    const src = `data:${m.filetype};base64,${m.payload}`;
+                    if (m.filetype.startsWith('image/')) {
+                        item.innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;">`;
+                    } else {
+                        item.innerHTML = `<video src="${src}" style="width:100%; height:100%; object-fit:cover;"></video>`;
+                    }
+                    container.appendChild(item);
+                }
+            });
         }
 
         function handleLocalSearch() {
-            const query = document.getElementById('localSearchInput').value.toLowerCase();
-            const filtered = getFilteredHistory(activeChatId).filter(m => {
-                if(m.msgType === 'text') return m.payload.toLowerCase().includes(query);
-                if(m.msgType === 'file') return (m.filename || '').toLowerCase().includes(query);
+            const query = document.getElementById('localSearchInput').value.toLowerCase().trim();
+            if (activeTab !== 'dialog') return;
+            
+            const history = getFilteredHistory(activeChatId);
+            if (!query) {
+                renderAllMessages(history);
+                return;
+            }
+
+            const filtered = history.filter(m => {
+                if (m.msgType === 'text') return m.payload.toLowerCase().includes(query);
+                if (m.msgType === 'file') return (m.filename || '').toLowerCase().includes(query);
                 return false;
             });
-            renderAllMessages(query ? filtered : getFilteredHistory(activeChatId));
+
+            renderAllMessages(filtered);
         }
     </script>
 </body>
